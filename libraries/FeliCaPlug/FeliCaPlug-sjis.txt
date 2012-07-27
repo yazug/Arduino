@@ -1,0 +1,331 @@
+Arduino 用 FeliCaPlug ライブラリ Version 1.3
+============================================
+ソニー株式会社
+2010年 7月15日
+
+■ はじめに
+
+  本ライブラリは、Arduino から FeliCa Plug モジュールを操作するための
+  ライブラリです。
+
+  FeliCa Plug については、以下のページの『FeliCa Plug ユーザーズ
+  マニュアル』および各製品仕様書もご参照ください。
+
+    http://www.sony.co.jp/Products/felica/tech-support/
+
+  本ライブラリは無保証です。本ライブラリの使用に起因する損害について、
+  当社は一切責任を負いませんので、ご了承ください。
+
+
+========================================================================
+■ ライブラリ使用上のご注意
+
+  本ライブラリは、原則として入力値や内部状態の検査を行いません。
+  引数に正しくない値を指定した場合の動作は不定となりますので、
+  ご注意ください。
+
+
+========================================================================
+■ メソッド仕様
+
+------------------------------------------------------------------------
+・initPort()
+
+  【書式】
+    void FeliCaPlug.initPort(
+        uint8_t swPin,
+        uint8_t selPin,
+        uint8_t dataPin,
+        uint8_t spiclkPin,
+        uint8_t irqPin,
+        uint8_t rfdetPin);
+
+  【解説】
+     initPort() は、FeliCa Plug と通信するための Arduino のポートの
+     初期化を行います。最初にこの関数を必ず呼び出してください。
+
+     各引数には、FeliCa Plug の各端子に対応する Arduino のピン番号を
+     指定してください。デフォルト値は以下の通りです。
+
+        ------------------------
+        swPin           9
+        selPin          10
+        dataPin         11
+        spiclkPin       12
+        irqPin          2
+        rfdetPin        3
+        ------------------------
+
+------------------------------------------------------------------------
+・setParam()
+
+  【書式】
+    void FeliCaPlug.setParam(
+        uint8_t mode,
+        uint8_t dfc[2],
+        uint8_t userParam[4],
+        uint8_t pmmRead,
+        uint8_t pmmWrite);
+
+  【解説】
+     setParam() は、FeliCa Plug の初期化パラメータを設定します。
+     この関数は、initPort() を呼び出したあと、doLoop() を呼び出す前
+     までに必ず呼び出してください。
+
+     初期化パラメータは、doLoop() 内でライブラリが FeliCa Plug を
+     初期化する際に使用されます。
+
+        ----------------------------------------------------------------
+        mode            以下のいずれか。
+                        FELICA_PLUG_MODE_FB     FB モードで使用する。
+                                                システムコードは FEE1
+                        FELICA_PLUG_MODE_FT     FT モードで使用する。
+                                                システムコードは FEE1
+                        FELICA_PLUG_MODE_TYPE3  FT モードで使用する。
+                                                システムコードは 12FC
+        dfc             データフォーマットコード
+        userParam       ユーザー設定パラメータ
+        pmmRead         Read Without Encryption の最大応答時間パラメータ。
+                        (省略時は 0xff)
+        pmmWrite        Write Without Encryption の最大応答時間パラメータ。
+                        (省略時は 0xff)
+        ----------------------------------------------------------------
+
+------------------------------------------------------------------------
+・setLEDPin()
+
+  【書式】
+    void FeliCaPlug.setLEDPin(
+        uint8_t ledPin);
+
+  【解説】
+     setLEDPin() は、FeliCa Plug の動作状態を示す LED が接続されている
+     Arduino のピン番号を設定します。この関数は、initPort() を呼び出した
+     あとに、必要に応じて呼び出してください。
+
+     LED のピン番号を設定すると、FeliCa Plug が動作状態になると LED が
+     点灯し、休止状態 (省電力モード) になると LED が消灯します。LED の
+     点灯・消灯処理は、doLoop() 内で行っています。
+
+     LED のピン番号を設定しなければ、点灯・消灯処理は行われません。
+     設定を解除したい場合は、ledPin に FELICA_PLUG_LED_PIN_NONE を
+     指定してください。
+
+------------------------------------------------------------------------
+・setBlockData()
+
+  【書式】
+    int setBlockData(
+        uint8_t* blockData,
+        uint16_t numOfBlocks,
+        int syncWithEEPROM,
+        int readOnly);
+
+  【解説】
+      setBlockData() は、リーダ／ライタからの Read Without Encryption
+      コマンドや Write Without Encryption コマンドで読み書きされる
+      ブロックデータの領域を設定します。FT モードを使用する場合は、
+      initPort() を呼び出したあとに、必要に応じてこの関数を呼び出して
+      ください。FB モードを使用する場合は、呼び出す必要はありません。
+
+      blockData には、numOfBlocks * 16 バイトの領域を指定する必要が
+      あります。
+
+      FT モードのとき、doLoop() 内で Read Without Encryption コマンドを
+      受信すると、設定された領域の該当するブロックのデータからレスポンス
+      を生成し、リーダ／ライタに返信します。また、Write Without Encryption
+      コマンドを受信すると、コマンドで指定されたデータを、設定された
+      領域の該当するブロックの部分に書き込みます。
+      この関数で領域を設定していない場合は、Read Without Encryption
+      コマンドに対してはデータがすべて 0 のレスポンスを返信し、Write
+      Without Encryption コマンドで指定されたデータは破棄します。
+
+      readOnly に 0 以外の値を指定した場合は、doLoop() 内の Write
+      Without Encryption コマンドの処理において、領域への書き込みや
+      コールバック関数の呼び出しを行わず、リーダ／ライタにステータス
+      フラグ 0xa6 を返すようになります。
+
+      syncWithEEPROM に 0 以外の値を指定した場合は、EEPROM にブロック
+      データが保存されているかどうかを調べ、保存されていればそれを
+      設定された領域に読み出します。このとき、numOfBlocks は
+      FELICA_PLUG_EEPROM_MAX_NUM_OF_BLOCKS (= 31) 以下でなければ
+      なりません。EEPROM に保存されているブロックデータのブロック数が、
+      maxNumOfBlocks より大きい場合は、EEPROM からブロックデータは
+      読み出しません。
+
+      syncWithEEPROM に 0 以外の値を指定した場合は、doLoop() 内で
+      FeliCa Plug を休止状態にするときに、ブロックデータ領域の内容が
+      EEPROM に保存されます。
+
+      syncWithEEPROM に 0 以外の値を指定した場合で、EEPROM から
+      ブロックデータを読み出さなかった場合は 0 を返します。
+      それ以外の場合は 1 を返します。
+
+      FB モードのときは、設定された領域は使用されません。
+
+------------------------------------------------------------------------
+・setSuspendCallback()
+
+  【書式】
+    void setSuspendCallback(
+        FeliCaPlug_common_callback_t func);
+
+  【解説】
+      setSuspendedCallback() は、doLoop() 内で FeliCa Plug を休止状態
+      (省電力モード) にしたあとに呼び出されるコールバック関数を設定
+      します。func に NULL を指定すると、設定を解除します。
+
+      initPort() を呼び出したあとに、必要に応じてこの関数を呼び出して
+      ください。
+
+      func に指定するコールバック関数は、引数なし、戻り値なしの
+      C++ リンケージの関数でなければなりません。
+
+------------------------------------------------------------------------
+・setResumeCallback()
+
+  【書式】
+    void setResumeCallback(
+        FeliCaPlug_common_callback_t func);
+
+  【解説】
+      setResumeCallback() は、doLoop() 内で FeliCa Plug を休止状態
+      (省電力モード) から復帰させたあとに呼び出されるコールバック
+      関数を設定します。func に NULL を指定すると、設定を解除します。
+
+      initPort() を呼び出したあとに、必要に応じてこの関数を呼び出して
+      ください。
+
+      func に指定するコールバック関数は、引数なし、戻り値なしの
+      C++ リンケージの関数でなければなりません。
+
+------------------------------------------------------------------------
+・setFBCallback()
+
+  【書式】
+    void setFBCallback(
+        FeliCaPlug_FB_callback_t func);
+
+  【解説】
+      setFBCallback() は、FB モードにおいて、doLoop() 内で
+      Write Without Encryption コマンドの受信を検知したときに
+      呼び出されるコールバック関数を設定します。
+      func に NULL を指定すると、設定を解除します。
+
+      initPort() を呼び出したあとに、必要に応じてこの関数を呼び出して
+      ください。
+
+      コールバック関数は、以下の引数を取ります。
+
+        uint8_t* numOfBlocks;      // (IN/OUT)
+        const uint8_t* blockList;  // (OUT)
+        uint8_t* blockData;        // (IN/OUT)
+
+      Write Without Encryption コマンドで受信したブロック数、
+      ブロックリスト、ブロックデータが、それぞれ numOfBlocks、
+      blockList、blockData に渡されます。
+
+      コールバック関数は、次の Read Without Encryption のレスポンスで
+      返信されるブロック数とブロックデータを、それぞれ numOfBlocks と
+      blockData に返してください。blockData には、12 * 16 バイトの
+      領域が確保されています。
+
+      func に指定するコールバック関数は、上記の引数を取り、戻り値が
+      ない、C++ リンケージの関数でなければなりません。
+
+------------------------------------------------------------------------
+・setFTReadCallback()
+
+  【書式】
+    void setFTReadCallback(
+        FeliCaPlug_FT_callback_t func);
+
+  【解説】
+      setFTReadCallback() は、FT モードにおいて、doLoop() 内での
+      Read Without Encryption コマンドの処理中に呼び出される
+      コールバック関数を設定します。
+      func に NULL を指定すると、設定を解除します。
+
+      initPort() を呼び出したあとに、必要に応じてこの関数を呼び出して
+      ください。
+
+      コールバック関数は、以下の引数を取ります。
+
+        uint16_t blockNum;         // (IN)
+
+      コールバック関数は、各ブロックのブロックデータを setBlockData()
+      で設定された領域から読み出して、Read Without Encryption コマンドの
+      レスポンスに設定する直前に呼び出されます。blockNum には、読み出す
+      ブロック番号が渡されます。コールバック関数は、ブロックごとに
+      呼び出されます。なお、setBlockData() を呼び出していなくても、
+      コールバック関数は呼び出されます。
+
+      func に指定するコールバック関数は、上記の引数を取り、戻り値が
+      ない、C++ リンケージの関数でなければなりません。
+
+------------------------------------------------------------------------
+・setFTWriteCallback()
+
+  【書式】
+    void setFTWriteCallback(
+        FeliCaPlug_FT_callback_t func);
+
+  【解説】
+      setFTWriteCallback() は、FT モードにおいて、doLoop() 内での
+      Write Without Encryption コマンドの処理中に呼び出される
+      コールバック関数を設定します。
+      func に NULL を指定すると、設定を解除します。
+
+      initPort() を呼び出したあとに、必要に応じてこの関数を呼び出して
+      ください。
+
+      コールバック関数は、以下の引数を取ります。
+
+        uint16_t blockNum;         // (IN)
+
+      コールバック関数は、Write Without Encryption コマンドで指定された
+      各ブロックのブロックデータを、setBlockData() で設定された領域に
+      書き込んだ直後に呼び出されます。blockNum には、書き込んだブロック
+      番号が渡されます。コールバック関数は、ブロックごとに呼び出されます。
+      なお、setBlockData() を呼び出していなくても、コールバック関数は
+      呼び出されます。
+
+      func に指定するコールバック関数は、上記の引数を取り、戻り値が
+      ない、C++ リンケージの関数でなければなりません。
+
+------------------------------------------------------------------------
+・doLoop()
+
+  【書式】
+    void doLoop(
+        unsigned long noActionInterval);
+
+  【解説】
+      doLoop() は、以下の処理を行います。
+
+      FeliCa Plug が休止状態 (省電力モード) のとき、FeliCa Plug が
+      磁界を検出していれば休止状態から復帰させ、動作状態にします。
+      このとき、setParam() で設定された初期化パラメータに基づいて、
+      FeliCa Plug の初期化を行います。
+
+      FeliCa Plug が動作状態 (省電力モードではない状態) のとき、
+      FeliCa Plug に無線データがあればそれを受信し、setParam() で
+      設定された受信モードに基づいて処理します。FB モードの場合は、
+      setFBCallback() で設定されていればそのコールバック関数を
+      呼び出します。FT モードの場合は、setBlockData() で設定された
+      領域に対して Read Without Encryption コマンドおよび Write
+      Without Encryption コマンドに基づいた読み書きを行います。
+      このとき、setFTReadCallback() および setFTWriteCallback() で
+      設定されていればそのコールバック関数を呼び出します。
+
+      FeliCa Plug が動作状態で、かつ FeliCa Plug が磁界を検出して
+      いない時間が 3000 ミリ秒を超えた場合は、FeliCa Plug を休止状態に
+      します。
+
+      以上のいずれの処理も行わない場合は、noActionInterval で指定された
+      時間 (ミリ秒。指定されない場合は 0 ミリ秒) だけ待ってから
+      呼び出し元に戻ります。
+
+========================================================================
+
+Copyright 2010 Sony Corporation

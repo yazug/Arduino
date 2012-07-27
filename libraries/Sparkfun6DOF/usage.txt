@@ -1,0 +1,32 @@
+INSTALL
+Move the IMU folder to your arduino_path/hardware/libraries
+
+USING IMU
+#include <IMU.h>
+
+Declare an IMU handler, pass the serial port which is connected to the IMU
+IMU imuHandler(&Serial1);
+
+Start the IMU (control-g)
+imuHandler.start();
+
+Set null values (may need tweaking..)
+The imu must be started and have packets available
+Will copy current values to NULL values
+This locks until the imu is getting packets
+
+while (!imuHandler.packetReady()) {}
+  imuHandler.setNulls();
+
+Read data:
+if (imuHandler.packetReady()) {
+	// do something here with the imu vars
+	my_var = f_accel[0];
+}
+
+Vars:
+f_accel[3], (XYZ)
+f_rate[3], (XYZ)
+
+The other sensor data is private. You can tweak filterData() to work with it
+Say for example, to do temperature calibration...

@@ -1,0 +1,52 @@
+19 May 2009
+
+Changed SdCard class and renamed it SdReader to avoid conflicts with other
+Arduino libraries.
+
+You must change the name in your sketches.  For example
+
+#include <SdCard.h>
+SdCard card;
+
+becomes
+
+#include <SdReader.h>
+SdReader card;
+
+Improved error checking in the library and example sketches.
+
+SD_CARD_INFO_SUPPORT is defined as 1 by default for SdReadTest.pde.
+You can set it to zero to save flash if you don't need info functions.
+
+Added a status function WaveHC::isPaused() which returns true if the player is paused.
+
+Changed FatReader::open(FatReader &dir, char *name) to use a case independent 
+compare so it will find files like "TUNE.WAV" when called with name = "Tune.wav".
+
+6 May 2009
+
+Added SdReadTest.pde 
+
+This sketch performs a number of tests on a SD card.
+
+SD_CARD_INFO_SUPPORT must be set to 1 in SdReader.h.
+
+Delete all .o files in the WaveHC folder to force a rebuild of the library.
+
+20 Apr 2009
+
+Added WaveHC::pause() and WaveHC::resume().
+
+18 Apr 2009
+
+Added support for AtMega328.
+
+Ladyada's OSX bug fix can be activated by setting OSX_BUG_FIX to 1 in WaveHC.cpp
+
+Added WaveHC::seek(pos) based on Ladyada's seek function.
+
+New dap_hc.pde prints free SRAM size in setup.
+
+27 Jan 2009
+
+This is a "preview release".  I am looking for testers and feedback.

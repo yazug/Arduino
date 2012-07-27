@@ -1,0 +1,15 @@
+Source code for the book "Make a Mind Controlled Arduino Robot" 
+http://MindControl.BotBook.com (c) Kimmo Karvinen & Tero Karvinen
+
+Think about it - and it moves. Think harder, the robot moves faster. 
+But don't worry; as a robot it knows to avoid the black border so it 
+doesn't fall off the table.
+
+"Make a Mind Controlled Arduino Robot" shows you how to build your 
+own. You learn to measure attention level with a NeuroSky headband and
+send this information into Arduino. You will also build a 
+line-avoiding system into the bot. And, of course, you will build the 
+chassis of your robot from scratch.
+
+http://www.amazon.com/gp/product/1449311547?ie=UTF8&tag=sulautetut-20&linkCode=as2&camp=1789&creative=390957&creativeASIN=1449389716
+

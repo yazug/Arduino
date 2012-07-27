@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/svn/!svn/ver/878/trunk/libraries/AP_Math
+END
+AP_Math.h
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/441/trunk/libraries/AP_Math/AP_Math.h
+END
+keywords.txt
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/441/trunk/libraries/AP_Math/keywords.txt
+END
+vector2.h
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/878/trunk/libraries/AP_Math/vector2.h
+END
+vector3.h
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/878/trunk/libraries/AP_Math/vector3.h
+END
+matrix3.h
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/551/trunk/libraries/AP_Math/matrix3.h
+END

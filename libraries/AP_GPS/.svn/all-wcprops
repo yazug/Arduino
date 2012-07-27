@@ -1,0 +1,125 @@
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/955/trunk/libraries/AP_GPS
+END
+GPS.h
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/!svn/ver/955/trunk/libraries/AP_GPS/GPS.h
+END
+AP_GPS_Auto.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/!svn/ver/673/trunk/libraries/AP_GPS/AP_GPS_Auto.cpp
+END
+AP_GPS_SIRF.h
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/671/trunk/libraries/AP_GPS/AP_GPS_SIRF.h
+END
+AP_GPS_406.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/539/trunk/libraries/AP_GPS/AP_GPS_406.cpp
+END
+AP_GPS_HIL.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/914/trunk/libraries/AP_GPS/AP_GPS_HIL.cpp
+END
+AP_GPS_Auto.h
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/673/trunk/libraries/AP_GPS/AP_GPS_Auto.h
+END
+AP_GPS_406.h
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/!svn/ver/671/trunk/libraries/AP_GPS/AP_GPS_406.h
+END
+AP_GPS_NMEA.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/!svn/ver/807/trunk/libraries/AP_GPS/AP_GPS_NMEA.cpp
+END
+AP_GPS_HIL.h
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/!svn/ver/914/trunk/libraries/AP_GPS/AP_GPS_HIL.h
+END
+AP_GPS_NMEA.h
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/665/trunk/libraries/AP_GPS/AP_GPS_NMEA.h
+END
+AP_GPS.h
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/857/trunk/libraries/AP_GPS/AP_GPS.h
+END
+AP_GPS_UBLOX.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/!svn/ver/671/trunk/libraries/AP_GPS/AP_GPS_UBLOX.cpp
+END
+AP_GPS_IMU.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/518/trunk/libraries/AP_GPS/AP_GPS_IMU.cpp
+END
+AP_GPS_MTK.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/683/trunk/libraries/AP_GPS/AP_GPS_MTK.cpp
+END
+AP_GPS_UBLOX.h
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/671/trunk/libraries/AP_GPS/AP_GPS_UBLOX.h
+END
+AP_GPS_IMU.h
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/!svn/ver/419/trunk/libraries/AP_GPS/AP_GPS_IMU.h
+END
+GPS.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/955/trunk/libraries/AP_GPS/GPS.cpp
+END
+AP_GPS_MTK.h
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/!svn/ver/671/trunk/libraries/AP_GPS/AP_GPS_MTK.h
+END
+AP_GPS_SIRF.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/!svn/ver/671/trunk/libraries/AP_GPS/AP_GPS_SIRF.cpp
+END
+AP_GPS_None.h
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/671/trunk/libraries/AP_GPS/AP_GPS_None.h
+END

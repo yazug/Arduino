@@ -1,0 +1,127 @@
+18 Aug 2010
+
+Optimized write() for append at end of file.  Up to 50% faster sequential write.
+
+13 Aug 2010
+
+Added the following function to allow the SD chip select pin to be set
+at runtime.  Warning - if the hardware SS pin is not used as chip select, 
+the hardware SS pin will be set to output mode by init(). An avr processor
+will not function as an SPI master unless SS is set to output mode.
+
+uint8_t Sd2Card::init(uint8_t sckRateID, uint8_t chipSelectPin);
+
+Added more SPI clock rate choices.  The above init() function and 
+uint8_t Sd2Card::init(uint8_t sckRateID) call the new function 
+uint8_t Sd2Card::setSckRate(uint8_t sckRateID).
+
+setSckRate() sets the SPI clock rate to F_CPU/pow(2, 1 + sckRateID).
+On an 16 MHz cpu this ranges from 8 MHz for sckRateId = 0 to 125 kHz
+for sckRateID = 6.  This function must be called after the init() call.
+
+Modified most examples to call card.init(SPI_HALF_SPEED) to avoid SPI bus
+errors with breadboards and jumpers.  This sets the SPI speed to F_CPU/4.
+Defined SPI_FULL_SPEED so init(SPI_FULL_SPEED) sets the SPI speed to F_CPU/2.
+
+Added the following  function to cancel date/time callback. This function
+must now be used instead of dateTimeCallback(NULL).
+
+static void SdFat::dateTimeCallbackCancel(void);
+
+
+The following member functions have been added for users who wish to avoid
+calls to functions with non-const references.
+
+uint8_t SdFile::contiguousRange(uint32_t* bgnBlock, uint32_t* endBlock);
+uint8_t SdFile::createContiguous(SdFile* dirFile,
+  const char* fileName, uint32_t size);
+static void SdFile::dateTimeCallback(
+  void (*dateTime)(uint16_t* date, uint16_t* time));
+uint8_t SdFile::dirEntry(dir_t* dir);
+uint8_t SdFile::makeDir(SdFile* dir, const char* dirName);
+uint8_t SdFile::open(SdFile* dirFile, const char* fileName, uint8_t oflag);
+uint8_t SdFile::open(SdFile* dirFile, const char* fileName);
+uint8_t SdFile::open(SdFile* dirFile, uint16_t index, uint8_t oflag);
+uint8_t SdFile::openRoot(SdVolume* vol);
+int8_t SdFile::readDir(dir_t* dir);
+static uint8_t remove(SdFile* dirFile, const char* fileName);
+uint8_t SdVolume::init(Sd2Card* dev);
+uint8_t SdVolume::init(Sd2Card* dev, uint8_t part);
+
+The following member functions have been marked as deprecated since they
+are now wrappers for the new functions. dateTimeCallback is the only wrapper
+with extra overhead.  The other wrappers are squeezed out by the complier.
+These wrappers will be maintained in the future for backward compatibility.
+
+uint8_t SdFile::contiguousRange(uint32_t& bgnBlock, uint32_t& endBlock);
+uint8_t SdFile::createContiguous(SdFile& dirFile,
+  const char* fileName, uint32_t size);
+static void SdFile::dateTimeCallback(
+  void (*dateTime)(uint16_t& date, uint16_t& time));
+uint8_t SdFile::dirEntry(dir_t& dir);
+uint8_t SdFile::makeDir(SdFile& dir, const char* dirName);
+uint8_t SdFile::open(SdFile& dirFile, const char* fileName, uint8_t oflag);
+uint8_t SdFile::open(SdFile& dirFile, const char* fileName);
+uint8_t SdFile::open(SdFile& dirFile, uint16_t index, uint8_t oflag);
+uint8_t SdFile::openRoot(SdVolume& vol);
+int8_t SdFile::readDir(dir_t& dir);
+static uint8_t remove(SdFile& dirFile, const char* fileName);
+uint8_t SdVolume::init(Sd2Card& dev);
+uint8_t SdVolume::init(Sd2Card& dev, uint8_t part);
+
+The deprecated function can be disabled by editing SdFat.h and setting
+#define ALLOW_DEPRECATED_FUNCTIONS 0
+
+Fixed file modify time for file rewrite.
+
+Major internal cleanup/reformat based on Google cpplint.py code style.
+
+New Sd2Card::init() algorithm.
+
+New SdFatInfo sketch for modified SdReadData() and other internal changes.
+
+Modified examples to eliminate deprecated functions.
+
+11 Jun 2010
+Added definitions for Teensy to ArduinoPins.h (Paul Stoffregen)
+
+Added troubleshooting.txt
+
+
+23 Dec 2009
+
+Added Software SPI capability.  See Sd2Card.h
+
+Defining MEGA_SOFT_SPI allows an unmodified Adafruit GPS Shield to be used
+on Mega Arduinos.  Software SPI works well with GPS Shield V1.1 
+but many SD cards will fail with GPS Shield V1.0.
+
+Added file ArduinoPins.h for pin definitions.
+
+More error printout in examples.
+
+
+25 Nov 2009
+
+Added new functions for SdFile class:
+
+dateTimeCallback(), dirEntry(), isRoot(), isSubDir, ls(), 
+makeDir(), printDirName(), printFatDate(), printFatTime(), 
+printTwoDigits(), rmDir(), and rmRStar().
+
+Added new examples to test and illustrate use of new functions.
+
+Removed sdCard() from SdFile class.
+
+Fixed several bugs.
+
+
+
+
+12 Nov 2009
+
+Major rewrite of the version of SdFat that was included with
+the WaveRP library.  
+
+This is a preview that is being released to obtain comments
+from several colleagues and future users.

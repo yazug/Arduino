@@ -1,0 +1,12 @@
+Features have been added to support an unmodified Adafruit GPS Shield
+on an Arduino Mega.
+
+Define MEGA_SOFT_SPI to be non-zero in Sd2Card.h to use software SPI 
+on Mega Arduinos.  Pins used are SS 10, MOSI 11, MISO 12, and SCK 13.
+
+Defining MEGA_SOFT_SPI allows an unmodified Adafruit GPS Shield to be
+used on Mega Arduinos.  Software SPI works well with GPS Shield V1.1
+but many SD cards will fail with GPS Shield V1.0.
+
+The examples SdFatGPS_CSVSensorLogger.pde and SdFatGPSLogger_v3.pde
+should work on on the Mega when MEGA_SOFT_SPI is defined.
