@@ -1,7 +1,11 @@
 #include <avr/pgmspace.h>
 
+#if ARDUINO >= 100
+#include <Arduino.h>
+#else
 #include <WProgram.h>
-#include "NewSoftSerial.h"
+#endif
+#include "SoftwareSerial.h"
 
 class SL025 {
       

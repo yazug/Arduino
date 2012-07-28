@@ -97,6 +97,19 @@ int Monitor::asHexadecimal(char * str, int limit) {
 	return count;
 }
 
+const Monitor & Monitor::printHexString(const word array[], const int size) {
+	int i;
+	for (i = 0; i < size; i++) {
+		if ( i > 0 )
+			print(' ');
+		print(array[i]>>12 & 0x0f, curr_base);
+		print(array[i]>>8 & 0x0f, curr_base);
+		print(array[i]>>4 & 0x0f, curr_base);
+		print(array[i]&0x0f, curr_base);
+	}
+	return *this;
+}
+
 const Monitor & Monitor::printHexString(const byte array[], const int size) {
 	int i;
 	for (i = 0; i < size; i++) {

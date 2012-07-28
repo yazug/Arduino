@@ -117,6 +117,7 @@ public:
 
 //	static char * byteString(char * buf, const byte[], const int, const byte = HEX);
 	const Monitor & printHexString(const byte[], const int);
+	const Monitor & printHexString(const word[], const int);
 	inline const Monitor & printHexString(const int d) {
 		return printHexString((byte*) &d, 2);
 	}

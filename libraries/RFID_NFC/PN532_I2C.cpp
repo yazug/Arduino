@@ -8,9 +8,9 @@
 #include <Wire.h>
 #include "PN532_I2C.h"
 
-#define PN532DEBUG
+//#define PN532DEBUG
 //#define MIFAREDEBUG
-#define PN532COMM
+//#define PN532COMM
 #define FELICADEBUG
 
 PN532::PN532(byte addr, byte irq, byte rst) :
@@ -102,7 +102,7 @@ byte PN532::receive(byte * buff) {
 	byte i;
 	byte n = 0;
 
-	Wire.requestFrom((int) i2c_addr, (int) 6, false);
+	Wire.requestFrom((int) i2c_addr, (int) 64);
 	receive();
 	for (i = 0; i < 6; i++) {
 		packet[i] = receive();
@@ -112,7 +112,7 @@ byte PN532::receive(byte * buff) {
 		lastStatus = STATUS_WRONG_PREAMBLE;
 		return 0;
 	}
-	Wire.requestFrom((int) i2c_addr, (int) n);
+//	Wire.requestFrom((int) i2c_addr, (int) n);
 	for (; i < n + 5 + 2; i++) {
 		packet[i] = receive();
 	}
@@ -130,7 +130,7 @@ byte PN532::receive(byte * buff) {
 		lastStatus = STATUS_CHECKSUMERROR;
 #ifdef PN532DEBUG
 		Serial.println("!!! Checksum error !!!");
-		//return 0;
+		return 0;
 #endif
 	}
 	return n;
@@ -292,7 +292,7 @@ byte PN532::getCommandResponse(const byte cmd, byte * resp,
 	}
 	if (!(packet[5] == 0xd5 && packet[6] == (cmd + 1)))
 		return 0;
-	Serial.println("getCommandResponse d5 ok.");
+//	Serial.println("getCommandResponse d5 ok.");
 #ifdef PN532DEBUG
 	byte xsum = packet[5 + count];
 	Serial.print("xsum in data = ");
@@ -301,7 +301,7 @@ byte PN532::getCommandResponse(const byte cmd, byte * resp,
 	// checksum is checked in receive.
 	if (packet[6 + count] != 0) {
 		Serial.println("checksum error");
-		//return 0;
+		return 0;
 	}
 #ifdef PN532DEBUG
 	Serial.print(packet[6 + count], HEX);
@@ -532,7 +532,8 @@ byte PN532::felica_DataExchange(const byte cmd, const byte * data,
 #ifdef FELICADEBUG
 	Serial.println("========");
 	Serial.print("FeliCa command: ");
-	Serial.print("count = ");
+	Serial.print(cmd, HEX);
+	Serial.print(" count = ");
 	Serial.println(len + 4, HEX);
 	printHexString(packet, len + 4);
 	Serial.println();
@@ -573,7 +574,7 @@ byte PN532::InCommunicateThru(const byte * data, const byte len) {
 
 #ifdef FELICADEBUG
 	Serial.println("========");
-	Serial.print("FeliCa command: ");
+	Serial.print("Thru: ");
 	Serial.print("count = ");
 	Serial.println(len + 1, DEC);
 	printHexString(packet, len + 2);

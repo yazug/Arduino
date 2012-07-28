@@ -16,6 +16,7 @@
 
 struct NFCCard {
 	static const byte data_size = 18;
+	//
 	byte type;
 	byte NFCIDLength;
 	union {

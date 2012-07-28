@@ -8,13 +8,15 @@
 #ifndef PN532_I2C_H_
 #define PN532_I2C_H_
 
+//#include <string.h>
+
 #if ARDUINO >= 100
 #include "Arduino.h"
 #else
 #include "WProgram.h"
 #endif
 
-#include <Wire.h>
+#include <MyWire.h>
 
 class PN532 {
 
@@ -119,6 +121,12 @@ public:
 //
 	static const byte FELICA_CMD_COMMTHRUEX = 0xa0;
 	static const byte FELICA_CMD_ECHO = 0xf0;
+	static const byte FELICA_CMD_POLLING = 0x00;
+	static const byte FELICA_CMD_REQUESTSERVICE = 0x02;
+	static const byte FELICA_CMD_ERQUESTRESPONSE = 0x04;
+	static const byte FELICA_CMD_READWITHOUTENCRYPTION = 0x06;
+	static const byte FELICA_CMD_WRITEWITHOUTENCRYPTION = 0x08;
+	static const byte FELICA_CMD_REQUESTSYSTEMCODE = 0x0c;
 
 	static void printHexString(const byte * a, byte len) {
 		for (int i = 0; i < len; i++) {
@@ -180,35 +188,72 @@ public:
 
 	byte felica_Polling(byte * resp, const word syscode = 0xffff) {
 		// Polling command, with system code request.
-		memcpy(resp, "\x00\xff\xff\x01\x00", 5);
+//		memset(resp, 0, 5); // the first byte is as FELICA_CMD_POLLING
+//		memcpy(resp, "\x00\xff\xff\x01\x00", 5);
+		resp[0] = FELICA_CMD_POLLING;
 		resp[1] = syscode & 0xff;
 		resp[2] = syscode >> 8 & 0xff;
+		resp[3] = 0x01; // request code: request sys code
+		resp[4] = 0; // time slot #
 		return communicateThru(resp, 5);
 	}
+
 	word felica_RequestService(byte * resp, const byte idm[],
 			const word servcodes[], const byte servnum) {
-		resp[0] = 0x02;
+		resp[0] = FELICA_CMD_REQUESTSERVICE;
 		memcpy(resp + 1, idm, 8);
 		resp[9] = servnum;
 		for (int i = 0; i < servnum; i++) {
 			resp[10 + 2 * i] = servcodes[i] & 0xff;
 			resp[11 + 2 * i] = servcodes[i] >> 8 & 0xff;
 		}
-		int count = communicateThru(resp, 10 + 2 * servnum);
-		return resp[count - 2] + ((word) resp[count - 1] << 8);
+		byte count = communicateThru(resp, 10 + 2 * servnum);
+		byte svnum = resp[9];
+		memcpy(resp, resp + 10, svnum * 2);
+		return svnum;
 	}
+
+	byte felica_RequestSystemCode(byte * resp, const byte idm[]) {
+		resp[0] = FELICA_CMD_REQUESTSYSTEMCODE;
+		memcpy(resp + 1, idm, 8);
+		if (communicateThru(resp, 9) == 0)
+			return 0;
+		byte n = resp[9];
+		memcpy(resp, resp + 10, n * 2);
+		return n;
+
+	}
+
 	byte felica_ReadWithoutEncryption(byte * resp, const byte idm[],
-			const word servcode, const byte blknum, const byte blk) {
-		resp[0] = 0x06;
+			const word servcode, const byte blknum, const byte blklist[]) {
+		resp[0] = FELICA_CMD_READWITHOUTENCRYPTION;
 		memcpy(resp + 1, idm, 8);
 		resp[9] = 1;
 		resp[10] = servcode & 0xff;
 		resp[11] = servcode >> 8 & 0xff;
 		resp[12] = blknum;
-		resp[13] = 0x80;
-		resp[14] = blk;
-		byte count = communicateThru(resp, 15);
-		return count;
+		byte pos = 13;
+		for (int i = 0; i < blknum;) {
+			if (blklist[i] & 0x80) {
+				// two bytes
+				resp[pos++] = blklist[i++];
+				resp[pos++] = blklist[i++];
+			} else {
+				// three bytes
+				resp[pos++] = blklist[i++];
+				resp[pos++] = blklist[i++];
+				resp[pos++] = blklist[i++];
+			}
+		}
+		// pos has been incremented after the last substitution
+		byte count = communicateThru(resp, pos);
+		if (resp[9] == 0) {
+			byte blocks = resp[11];
+			memcpy(resp, resp + 12, blocks * 16);
+			return blocks;
+		} else {
+			return 0;
+		}
 	}
 };
 

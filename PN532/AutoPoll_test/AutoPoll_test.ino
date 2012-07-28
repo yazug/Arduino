@@ -1,4 +1,4 @@
-#include <Wire.h>
+#include "MyWire.h"
 #include "PN532_I2C.h"
 #include "NFCCard.h"
 
@@ -20,7 +20,7 @@ NFCCard card;
 void setup() {
   pinMode(5, OUTPUT);
   digitalWrite(5, HIGH);
-  mon.begin(19200);
+  mon.begin(57600);
 
   Wire.begin();
   nfc.begin();
@@ -77,32 +77,34 @@ void loop() {
         mon << "FeliCa" << mon.endl 
           << " ID: " << mon.printHexString( card.IDm(), 8) << mon.endl;
         mon << "Pad: " << mon.printHexString( card.PMm(), 8) << mon.endl;
-        mon << mon.printHexString( card.SystemCode(), 2) << mon.endl;
-        //
+//        mon << mon.printHexString( card.SystemCode(), 2) << mon.endl;
         int len;
-        word scodes[] = { 0x090F, 0x0300, 0xFFFF};
-        int snum = 3;
-        /*
-        // test
-         byte t[] = {
-         0x00, 0xcc, 0xaa, 0xbb, 0x99, 0x11               };
-         nfc.felica_DataExchange(PN532::FELICA_CMD_ECHO, t, 4);
-         */
-
         // Polling command, with system code request.
-        len = nfc.felica_Polling(tmp, 0x0300);
+        len = nfc.felica_Polling(tmp, 0x9e80);
         mon << mon.printHexString(tmp, len) << mon.endl;
         //
+        mon << "Request System Code: " << mon.endl;
+        len = nfc.felica_RequestSystemCode(tmp, card.IDm());
+        mon << mon.printHexString((word *)tmp, len) <<mon.endl;
         // low-byte first service code.
         // Suica, Nimoca, etc. 0x090f
-        // Edy service 0x1317, system 0x00FE
+        // Edy service 0x1317, system 0x00FE // 8280
         // FCF 1a8b
-        word code;
-        code = nfc.felica_RequestService(tmp, card.IDm(), scodes, snum);
-        mon << "Request Service: " << mon.printHexString(code) << mon.endl;
-        byte cnt;
-        cnt = nfc.felica_ReadWithoutEncryption(tmp, card.IDm(), 0x090f, 1, 0);
-        mon << "Read: " << mon.printHexString(tmp, 32) << mon.endl;
+        mon << "Request Service: " << mon.endl;
+        word scodes[] = { 0x1a8b, 0x1317, 0x090f, 0xffff };
+        int snum = 4;
+        c = nfc.felica_RequestService(tmp, card.IDm(), scodes, snum);
+        mon << "c = " << c << mon.endl;
+        mon << mon.printHexString((word*)tmp,c) << mon.endl;
+        mon << "Read w/o Enc.: " << mon.endl;
+        byte blks[] = {0x80, 0x00};
+        c = nfc.felica_ReadWithoutEncryption(tmp, card.IDm(), 0x090f, 1, blks);
+        mon << "Read: ";
+        if ( c != 0 ) {
+          mon << mon.printHexString(tmp, c*16) << mon.endl;
+        } else {
+          mon << "status flags " << mon.printHexString(tmp+9, 2) << mon.endl;
+        }
       } 
       else if ( card.type == 0x10 ) {
         mon << "Mifare" << mon.endl << "  ID: ";
