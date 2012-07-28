@@ -11,7 +11,7 @@
 //#define PN532DEBUG
 //#define MIFAREDEBUG
 //#define PN532COMM
-#define FELICADEBUG
+//#define FELICADEBUG
 
 PN532::PN532(byte addr, byte irq, byte rst) :
 		i2c_addr(addr), pin_irq(irq), pin_rst(rst), lastStatus(0), chksum(
@@ -530,14 +530,12 @@ byte PN532::felica_DataExchange(const byte cmd, const byte * data,
 	memcpy(packet + 4, data, len);
 
 #ifdef FELICADEBUG
-	Serial.println("========");
 	Serial.print("FeliCa command: ");
 	Serial.print(cmd, HEX);
 	Serial.print(" count = ");
 	Serial.println(len + 4, HEX);
 	printHexString(packet, len + 4);
 	Serial.println();
-	Serial.println("========");
 #endif
 
 	/* Send the command */
@@ -552,13 +550,11 @@ byte PN532::felica_DataExchange(const byte cmd, const byte * data,
 		return 0;
 	}
 #ifdef FELICADEBUG
-	Serial.println("========");
 	Serial.print("Response for command: ");
 	Serial.print("count = ");
 	Serial.println(c, HEX);
 	printHexString(packet, c);
 	Serial.println();
-	Serial.println("========");
 #endif
 	return 1;
 }
@@ -573,10 +569,10 @@ byte PN532::InCommunicateThru(const byte * data, const byte len) {
 	memcpy(packet + 2, data, len);
 
 #ifdef FELICADEBUG
-	Serial.println("========");
 	Serial.print("Thru: ");
 	Serial.print("count = ");
-	Serial.println(len + 1, DEC);
+	Serial.print(len + 1, DEC);
+	Serial.print("  ");
 	printHexString(packet, len + 2);
 	Serial.println();
 #endif
@@ -601,13 +597,12 @@ byte PN532::communicateThru(byte * data, const byte len) {
 		return 0;
 	}
 #ifdef FELICADEBUG
-	Serial.println();
 	Serial.print("Response: ");
 	Serial.print("count = ");
-	Serial.println(count, DEC);
+	Serial.print(count, DEC);
+	Serial.print("   ");
 	printHexString(packet, count);
 	Serial.println();
-	Serial.println("========");
 #endif
 	if ( packet[0] != 0 ) {
 		return 0;

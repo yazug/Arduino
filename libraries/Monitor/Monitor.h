@@ -85,6 +85,16 @@ public:
 		}
 		return p -s;
 	}
+
+	size_t print(const byte * s, int len, byte base) {
+		char * p = (char*) s;
+		for (int i = 0; i < len; i++, p++) {
+			printNumber(*p, base);
+			//print(' ');
+		}
+		return len;
+	}
+
 #else
 	void print(const char * s, byte base) {
 		char * p = (char*) s;
@@ -116,19 +126,10 @@ public:
 	boolean wait(const byte msg[], int len, long limit);
 
 //	static char * byteString(char * buf, const byte[], const int, const byte = HEX);
-	const Monitor & printHexString(const byte[], const int);
-	const Monitor & printHexString(const word[], const int);
-	inline const Monitor & printHexString(const int d) {
-		return printHexString((byte*) &d, 2);
-	}
-	inline const Monitor & printHexString(const unsigned int d) {
-		return printHexString((byte*) &d, 2);
-	}
-	inline const Monitor & printHexString(const long d) {
-		return printHexString((byte*) &d, 4);
-	}
-	inline const Monitor & printHexString(const unsigned long d) {
-		return printHexString((byte*) &d, 4);
+	const Monitor & printHexString(const byte array[], const int n, const boolean gap = true);
+	const Monitor & printHexString(const word array[], const int n, const boolean gap = true);
+	inline const Monitor & printHexString(const word val) {
+		return printHexString((word*)&val, 1, false);
 	}
 
 

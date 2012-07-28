@@ -5,25 +5,25 @@
 #include "Monitor.h"
 
 /*
-char * Monitor::byteString(char * buf, const byte val[], const int len,
-		const byte base) {
-	char * p = buf;
-	for (int i = 0; i < len; i++) {
-		switch (base) {
-		case HEX:
-			p += sprintf(p, "%02X ", val[i]);
-			break;
-		case BIN:
-			if (i > 0)
-				p += sprintf(p, " ");
-			for (int bit = 0; bit < 8; bit++)
-				p += sprintf(p, "%d", val[i] >> bit & 1);
-			break;
-		}
-	}
-	return buf;
-}
-*/
+ char * Monitor::byteString(char * buf, const byte val[], const int len,
+ const byte base) {
+ char * p = buf;
+ for (int i = 0; i < len; i++) {
+ switch (base) {
+ case HEX:
+ p += sprintf(p, "%02X ", val[i]);
+ break;
+ case BIN:
+ if (i > 0)
+ p += sprintf(p, " ");
+ for (int bit = 0; bit < 8; bit++)
+ p += sprintf(p, "%d", val[i] >> bit & 1);
+ break;
+ }
+ }
+ return buf;
+ }
+ */
 
 void Monitor::printNumber(byte n, byte base) {
 	byte buf[8 * sizeof(long)]; // Assumes 8-bit chars.
@@ -35,12 +35,14 @@ void Monitor::printNumber(byte n, byte base) {
 			print((char) n);
 			print(' ');
 		} else {
+			/*
 			print("\\x");
 			print(n >> 4 & 0x0f, base);
 			print(n & 0x0f, base);
+			*/
+			print('.');
 		}
 	} else {
-
 		while (d > 0) {
 			buf[i++] = n % base;
 			n /= base;
@@ -53,7 +55,6 @@ void Monitor::printNumber(byte n, byte base) {
 							'0' + buf[i - 1] : 'A' + buf[i - 1] - 10));
 	}
 }
-
 
 unsigned long Monitor::asBCD(unsigned long lval) {
 	unsigned long tmp;
@@ -97,26 +98,26 @@ int Monitor::asHexadecimal(char * str, int limit) {
 	return count;
 }
 
-const Monitor & Monitor::printHexString(const word array[], const int size) {
+const Monitor & Monitor::printHexString(const word array[], const int size, const boolean gap) {
 	int i;
 	for (i = 0; i < size; i++) {
-		if ( i > 0 )
+		if (i > 0 && gap)
 			print(' ');
-		print(array[i]>>12 & 0x0f, curr_base);
-		print(array[i]>>8 & 0x0f, curr_base);
-		print(array[i]>>4 & 0x0f, curr_base);
-		print(array[i]&0x0f, curr_base);
+		print(array[i] >> 12 & 0x0f, curr_base);
+		print(array[i] >> 8 & 0x0f, curr_base);
+		print(array[i] >> 4 & 0x0f, curr_base);
+		print(array[i] & 0x0f, curr_base);
 	}
 	return *this;
 }
 
-const Monitor & Monitor::printHexString(const byte array[], const int size) {
+const Monitor & Monitor::printHexString(const byte array[], const int size, const boolean gap) {
 	int i;
 	for (i = 0; i < size; i++) {
-		if ( i > 0 )
+		if (i > 0 && gap)
 			print(' ');
-		print(array[i]>>4, curr_base);
-		print(array[i]&0x0f, curr_base);
+		print(array[i] >> 4, curr_base);
+		print(array[i] & 0x0f, curr_base);
 	}
 	return *this;
 }
@@ -126,9 +127,9 @@ int Monitor::read(byte rcv[], const int maxlen, const long limit) {
 	int c;
 	long current = millis();
 
-	while ( i < maxlen && millis() < current + limit ) {
-		if ( available() && (c = read()) != -1 ) {
-			if ( rcv != NULL )
+	while (i < maxlen && millis() < current + limit) {
+		if (available() && (c = read()) != -1) {
+			if (rcv != NULL)
 				rcv[i] = (byte) c;
 			i++;
 			current = millis();
@@ -142,19 +143,18 @@ boolean Monitor::wait(const byte msg[], const int length, const long limit) {
 	int i = 0;
 	byte c;
 	long current = millis();
-	while ( i < length && millis() < current + limit ) {
-		if ( available() && (c = read()) != -1 ) {
-			if ( msg[i] != (byte) c )
+	while (i < length && millis() < current + limit) {
+		if (available() && (c = read()) != -1) {
+			if (msg[i] != (byte) c)
 				return false;
 			i++;
 			current = millis();
 		}
 	}
-	if ( i < length )
+	if (i < length)
 		return false;
 	return true;
 }
-
 
 int Monitor::readToken(char buf[], long timeout) {
 	long msec = millis();
@@ -165,7 +165,7 @@ int Monitor::readToken(char buf[], long timeout) {
 	while (!available() && (millis() < timeout + msec))
 		;
 	while (available() && (c = read())) {
-		if (isspace(c) ) {
+		if (isspace(c)) {
 			if (bp != 0)
 				break;
 		} else {
@@ -188,7 +188,7 @@ int Monitor::readNumber(char buf[], long timeout) {
 	buf[bp] = 0;
 
 	while (available() && (c = read())) {
-		if ( !(isdigit(c) || c == '.' || c == '-' ) ) {
+		if (!(isdigit(c) || c == '.' || c == '-')) {
 			if (bp != 0)
 				break;
 		} else {

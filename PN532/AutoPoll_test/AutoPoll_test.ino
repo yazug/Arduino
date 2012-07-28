@@ -26,7 +26,6 @@ void setup() {
   nfc.begin();
 
   mon << "Hi.";
-
   mon << "Firmware version: ";
   unsigned long r = 0;
   for (int i = 0; i < 10 ; i++) {
@@ -59,6 +58,7 @@ void setup() {
 }
 
 void loop() {
+  NFCCard tmpcard;
   byte c, tmp[64];
 
   if ( millis() > prev + 50 ) {
@@ -77,33 +77,41 @@ void loop() {
         mon << "FeliCa" << mon.endl 
           << " ID: " << mon.printHexString( card.IDm(), 8) << mon.endl;
         mon << "Pad: " << mon.printHexString( card.PMm(), 8) << mon.endl;
-//        mon << mon.printHexString( card.SystemCode(), 2) << mon.endl;
+        //        mon << mon.printHexString( card.SystemCode(), 2) << mon.endl;
         int len;
         // Polling command, with system code request.
-        len = nfc.felica_Polling(tmp, 0x9e80);
+        len = nfc.felica_Polling(tmp, 0x00fe);
         mon << mon.printHexString(tmp, len) << mon.endl;
         //
         mon << "Request System Code: " << mon.endl;
-        len = nfc.felica_RequestSystemCode(tmp, card.IDm());
+        len = nfc.felica_RequestSystemCode(tmp);
         mon << mon.printHexString((word *)tmp, len) <<mon.endl;
         // low-byte first service code.
-        // Suica, Nimoca, etc. 0x090f
-        // Edy service 0x1317, system 0x00FE // 8280
+        // Suica, Nimoca, etc. 0x090f system 0x0300
+        // Edy service 0x170f (0x1317), system 0x00FE // 8280
         // FCF 1a8b
-        mon << "Request Service: " << mon.endl;
-        word scodes[] = { 0x1a8b, 0x1317, 0x090f, 0xffff };
-        int snum = 4;
-        c = nfc.felica_RequestService(tmp, card.IDm(), scodes, snum);
-        mon << "c = " << c << mon.endl;
-        mon << mon.printHexString((word*)tmp,c) << mon.endl;
-        mon << "Read w/o Enc.: " << mon.endl;
-        byte blks[] = {0x80, 0x00};
-        c = nfc.felica_ReadWithoutEncryption(tmp, card.IDm(), 0x090f, 1, blks);
-        mon << "Read: ";
-        if ( c != 0 ) {
-          mon << mon.printHexString(tmp, c*16) << mon.endl;
-        } else {
-          mon << "status flags " << mon.printHexString(tmp+9, 2) << mon.endl;
+        mon << "Request Service code and read blocks: " << mon.endl;
+        word scodes[] = { 
+          0x1a8b, 0x170f, 0x1317, 0x1713, 0x090f, 0xffff                         };
+        int snum = 5;
+        for(int i = 0; i < snum; i++) {
+          word scver = nfc.felica_RequestService(scodes[i]);
+          mon << mon.printHexString(scodes[i]) << ": " 
+            << mon.printHexString(scver) << mon.endl;
+          if ( scodes[i] != 0xffff && scver != 0xffff ) {
+            byte blks[] = { 
+              0x80, 0x00, 0x80, 0x01, 0x80, 0x02, 0x80, 0x03            };
+            for (int blkno = 0; blkno < 4; blkno++) {
+              c = nfc.felica_ReadWithoutEncryption(tmp, scodes[i], 1, blks+(blkno*2));
+              mon << mon.printHexString(blks+(blkno*2), 2) << ": ";
+              if ( c != 0 ) {
+                mon << mon.printHexString(tmp, c*16) << mon.endl;
+                mon.print(tmp, c*16, 255);
+                mon << mon.endl;
+              }
+              mon << mon.endl;
+            }
+          }
         }
       } 
       else if ( card.type == 0x10 ) {
@@ -111,12 +119,13 @@ void loop() {
         mon.printHexString(card.UID(), card.IDLength());
         mon << mon.endl;
       }
-
-      delay(1000);
     } 
   }
   delay(1000);
 }
+
+
+
 
 
 

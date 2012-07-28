@@ -87,6 +87,8 @@ class PN532 {
 	byte packet[PACKBUFFSIZE];
 	byte lastStatus;
 	//
+	byte IDLength;
+	byte IDData[10];
 
 	inline void wirewrite(const byte & d) {
 		Wire.write(d);
@@ -188,34 +190,53 @@ public:
 
 	byte felica_Polling(byte * resp, const word syscode = 0xffff) {
 		// Polling command, with system code request.
-//		memset(resp, 0, 5); // the first byte is as FELICA_CMD_POLLING
-//		memcpy(resp, "\x00\xff\xff\x01\x00", 5);
 		resp[0] = FELICA_CMD_POLLING;
 		resp[1] = syscode & 0xff;
 		resp[2] = syscode >> 8 & 0xff;
 		resp[3] = 0x01; // request code: request sys code
 		resp[4] = 0; // time slot #
-		return communicateThru(resp, 5);
+		byte cnt = communicateThru(resp, 5);
+		if (resp[0] == FELICA_CMD_POLLING + 1 ) {
+			memcpy(resp, resp+1, cnt-9);
+			IDLength = 8;
+			memcpy(IDData, resp, cnt-9);
+			return cnt;
+		}
+		IDLength = 0;
+		return 0;
 	}
 
-	word felica_RequestService(byte * resp, const byte idm[],
-			const word servcodes[], const byte servnum) {
+	byte felica_RequestService(byte * resp, const word servcodes[], const byte servnum) {
 		resp[0] = FELICA_CMD_REQUESTSERVICE;
-		memcpy(resp + 1, idm, 8);
+		memcpy(resp + 1, IDData, 8);
 		resp[9] = servnum;
 		for (int i = 0; i < servnum; i++) {
 			resp[10 + 2 * i] = servcodes[i] & 0xff;
 			resp[11 + 2 * i] = servcodes[i] >> 8 & 0xff;
 		}
 		byte count = communicateThru(resp, 10 + 2 * servnum);
-		byte svnum = resp[9];
-		memcpy(resp, resp + 10, svnum * 2);
-		return svnum;
+		if (resp[0] == FELICA_CMD_REQUESTSERVICE + 1 && count >= 10) {
+			byte svnum = resp[9];
+			memcpy(resp, resp + 10, svnum * 2);
+			return svnum;
+		}
+		return 0;
 	}
 
-	byte felica_RequestSystemCode(byte * resp, const byte idm[]) {
+	word felica_RequestService(const word servcode) {
+		byte tmp[14];
+		if ( !felica_RequestService(tmp, (word*)&servcode, 1) ) {
+			return 0xffff;
+		}
+		word servcodever = tmp[11];
+
+		return (servcodever<<8) + tmp[10];
+	}
+
+
+	byte felica_RequestSystemCode(byte * resp) {
 		resp[0] = FELICA_CMD_REQUESTSYSTEMCODE;
-		memcpy(resp + 1, idm, 8);
+		memcpy(resp + 1, IDData, 8);
 		if (communicateThru(resp, 9) == 0)
 			return 0;
 		byte n = resp[9];
@@ -224,10 +245,10 @@ public:
 
 	}
 
-	byte felica_ReadWithoutEncryption(byte * resp, const byte idm[],
+	byte felica_ReadWithoutEncryption(byte * resp,
 			const word servcode, const byte blknum, const byte blklist[]) {
 		resp[0] = FELICA_CMD_READWITHOUTENCRYPTION;
-		memcpy(resp + 1, idm, 8);
+		memcpy(resp + 1, IDData, 8);
 		resp[9] = 1;
 		resp[10] = servcode & 0xff;
 		resp[11] = servcode >> 8 & 0xff;
@@ -255,6 +276,7 @@ public:
 			return 0;
 		}
 	}
+
 };
 
 #endif /* PN532_I2C_H_ */
