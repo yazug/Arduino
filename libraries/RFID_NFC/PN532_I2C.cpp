@@ -9,8 +9,8 @@
 #include "PN532_I2C.h"
 
 //#define PN532DEBUG
-//#define MIFAREDEBUG
-//#define PN532COMM
+#define MIFAREDEBUG
+#define PN532COMM
 //#define FELICADEBUG
 
 PN532::PN532(byte addr, byte irq, byte rst) :
@@ -420,7 +420,7 @@ byte PN532::InDataExchange(const byte Tg, const byte micmd, const byte blkaddr,
 	return 1;
 }
 
-byte PN532::mifare_AuthenticateBlock(byte * uid, byte uidLen, word blkn, const byte * keyData) {
+byte PN532::mifare_AuthenticateBlock(const byte * uid, byte uidLen, word blkn, const byte * keyData) {
 	uint8_t len;
 	byte tmp[16];
 

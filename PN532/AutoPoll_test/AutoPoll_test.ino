@@ -12,6 +12,8 @@ Monitor mon(Serial);
 
 const byte cardkey_b[] = {
   0xBB, 0x63, 0x45, 0x74, 0x55, 0x79, 0x4B };
+const byte factory_a[] = {
+  0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
 
 long prev;
@@ -92,7 +94,7 @@ void loop() {
         // FCF 1a8b
         mon << "Request Service code and read blocks: " << mon.endl;
         word scodes[] = { 
-          0x1a8b, 0x170f, 0x1317, 0x1713, 0x090f, 0xffff                         };
+          0x1a8b, 0x170f, 0x1317, 0x1713, 0x090f, 0xffff                                 };
         int snum = 5;
         for(int i = 0; i < snum; i++) {
           word scver = nfc.felica_RequestService(scodes[i]);
@@ -100,7 +102,7 @@ void loop() {
             << mon.printHexString(scver) << mon.endl;
           if ( scodes[i] != 0xffff && scver != 0xffff ) {
             byte blks[] = { 
-              0x80, 0x00, 0x80, 0x01, 0x80, 0x02, 0x80, 0x03            };
+              0x80, 0x00, 0x80, 0x01, 0x80, 0x02, 0x80, 0x03                        };
             for (int blkno = 0; blkno < 4; blkno++) {
               c = nfc.felica_ReadWithoutEncryption(tmp, scodes[i], 1, blks+(blkno*2));
               mon << mon.printHexString(blks+(blkno*2), 2) << ": ";
@@ -118,11 +120,21 @@ void loop() {
         mon << "Mifare" << mon.endl << "  ID: ";
         mon.printHexString(card.UID(), card.IDLength());
         mon << mon.endl;
+        if ( nfc.mifare_AuthenticateBlock(card.UID(), card.IDLength(), 4,
+        factory_a) ) {
+          mon << "Success." << mon.endl;
+          
+          mon << nfc.mifare_ReadDataBlock(4, tmp) << mon.endl;
+        } 
+        else {
+          mon << "Failure." << mon.endl;
+        }
       }
     } 
   }
   delay(1000);
 }
+
 
 
 

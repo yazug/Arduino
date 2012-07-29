@@ -179,7 +179,7 @@ public:
 	byte listPassiveTarget(byte * data, const byte brty =
 			BaudrateType_106kbitTypeA);
 
-	byte mifare_AuthenticateBlock(byte * uid, byte uidLen, word blockNumber,
+	byte mifare_AuthenticateBlock(const byte * uid, byte uidLen, word blockNumber,
 			const byte * keyData);
 	byte mifare_ReadDataBlock(uint8_t blockNumber, uint8_t * data);
 
