@@ -77,7 +77,7 @@ void loop() {
         };
         int snum = 1;
         for(int i = 0; i < snum; i++) {
-          word scver = nfc.felica_RequestService(scodes[i]);
+          word scver = nfc.felica_RequestService(0x1a8b);
           mon << mon.printHexString(scodes[i]) << ": " 
             << mon.printHexString(scver) << mon.endl;
           if ( scodes[i] != 0xffff && scver != 0xffff ) {

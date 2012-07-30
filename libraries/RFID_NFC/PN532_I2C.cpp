@@ -383,11 +383,11 @@ byte PN532::InDataExchange(const byte Tg, const byte fcmd, const byte * data,
 	// Prepare a Felica command //
 	packet[0] = COMMAND_InDataExchange; /* Data Exchange Header */
 	packet[1] = Tg; /* target number */
-	packet[2] = len;
+	packet[2] = len+2;
 	packet[3] = fcmd;
 	memcpy(packet + 4, data, len);
 
-#ifdef MIFAREDEBUG
+#ifdef FELICADEBUG
 	printHexString(packet, len + 4);
 	Serial.println();
 #endif
@@ -611,3 +611,4 @@ byte PN532::communicateThru(byte * data, const byte len) {
 	memcpy(data, packet+2, count);
 	return count;
 }
+

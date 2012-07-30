@@ -125,8 +125,7 @@ void loop() {
         if ( nfc.mifare_AuthenticateBlock(card.UID(), card.IDLength(), 4,
         factory_a) ) {
           mon << "Success." << mon.endl;
-          
-          mon << nfc.mifare_ReadDataBlock(4, tmp) << mon.endl;
+          nfc.mifare_ReadDataBlock(4, tmp) << mon.endl;
         } 
         else {
           mon << "Failure." << mon.endl;

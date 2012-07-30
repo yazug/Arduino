@@ -231,7 +231,6 @@ public:
 			return 0xffff;
 		}
 		word servcodever = tmp[11];
-
 		return (servcodever<<8) + tmp[10];
 	}
 
@@ -278,6 +277,7 @@ public:
 			return 0;
 		}
 	}
+
 
 };
 
