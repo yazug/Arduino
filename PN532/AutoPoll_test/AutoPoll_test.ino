@@ -69,12 +69,14 @@ void loop() {
     tmp[1] = nfc.Type_GenericPassive212kbFeliCa;
     tmp[2] = nfc.Type_GenericPassive424kbFeliCa;
     tmp[3] = nfc.Type_PassiveTypeB;
-    if ( nfc.InAutoPoll(2,2,tmp,4) != 0 && (c = nfc.autoPoll(tmp)) != 0 ) {
+    if ( nfc.InAutoPoll(2,2,tmp,4) != 0 && nfc.autoPoll_response(tmp) != 0 ) {
       mon << mon.endl << "Num of tags = " << (int)tmp[0] << mon.endl;
       PN532::printHexString(tmp, 16);
+      card.clear();
+      if ( tmp[0] ) {
       card.setInListPassiveTarget(tmp[1], tmp[2], tmp+3);
       mon << "type = " << card.type << mon.endl;
-
+      }
       if ( card.type == 0x11 ) {
         mon << "FeliCa" << mon.endl 
           << " ID: " << mon.printHexString( card.IDm(), 8) << mon.endl;

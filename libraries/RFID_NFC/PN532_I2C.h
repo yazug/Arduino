@@ -164,11 +164,9 @@ public:
 	static const byte Type_FeliCa424kb = 0x12;
 	byte InAutoPoll(const byte pollnr, const byte per, const byte * types,
 			const byte typeslen);
-	inline byte autoPoll(const byte * types, const byte typenum, byte * resp, const long & waitmillis = 1000) {
-		if ( !InAutoPoll(1, 2, types, typenum)
-				&& getCommandResponse(PN532::COMMAND_InAutoPoll, resp, waitmillis) ) {
+	inline byte autoPoll_response(byte * resp, const long & waitmillis = 1000) {
+		if ( getCommandResponse(PN532::COMMAND_InAutoPoll, resp, waitmillis) )
 			return resp[0];
-		}
 		return 0;
 	}
 	byte InDataExchange(const byte Tg, const byte * data, const byte length);

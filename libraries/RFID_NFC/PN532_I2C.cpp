@@ -9,8 +9,8 @@
 #include "PN532_I2C.h"
 
 //#define PN532DEBUG
-#define MIFAREDEBUG
-#define PN532COMM
+//#define MIFAREDEBUG
+//#define PN532COMM
 //#define FELICADEBUG
 
 PN532::PN532(byte addr, byte irq, byte rst) :
