@@ -102,7 +102,7 @@ byte PN532::receive(byte * buff) {
 	byte i;
 	byte n = 0;
 
-	Wire.requestFrom((int) i2c_addr, (int) 64);
+	Wire.requestFrom((int) i2c_addr, BUFFER_LENGTH);
 	receive();
 	for (i = 0; i < 6; i++) {
 		packet[i] = receive();
