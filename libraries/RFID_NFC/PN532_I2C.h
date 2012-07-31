@@ -146,8 +146,8 @@ public:
 	void begin() {
 		init();
 	}
-	unsigned long getFirmwareVersion();
 
+	unsigned long getFirmwareVersion();
 	boolean SAMConfiguration(byte mode = 0x01, byte timeout = 0x14,
 			byte use_irq = 0x01);
 
@@ -177,6 +177,7 @@ public:
 
 	byte getCommandResponse(const byte, byte * resp, const long & waitmillis =
 			1000);
+	byte felica_getDataExchangeResponse(const byte fcmd, byte * resp);
 
 	byte listPassiveTarget(byte * data, const byte brty =
 			BaudrateType_106kbitTypeA);

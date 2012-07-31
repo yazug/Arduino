@@ -273,10 +273,8 @@ byte PN532::getCommandResponse(const byte cmd, byte * resp,
 		return 0;
 	byte count = receive(packet);
 //#define PN532DEBUG
-#ifdef PN532DEBUG
-	Serial.print("getCommandResponse count = ");
-	Serial.print(count, DEC);
-	Serial.print(", ");
+#ifdef PN532COMM
+	Serial.print("<< ");
 	printHexString(packet, count + 7);
 	Serial.println();
 #endif
@@ -300,30 +298,30 @@ byte PN532::getCommandResponse(const byte cmd, byte * resp,
 #endif
 	// checksum is checked in receive.
 	if (packet[6 + count] != 0) {
-		Serial.println("checksum error");
+		Serial.println("termination 0x00 error");
 		return 0;
 	}
 #ifdef PN532DEBUG
 	Serial.print(packet[6 + count], HEX);
 	Serial.println(" getCommandResponse postamble ok.");
 #endif
-#ifdef PN532COMM
-	Serial.print("Response: ");
-	printHexString(packet, count+7);
-	Serial.println();
-#endif
+
 	count -= 2;
 	memcpy(resp, packet + 7, count);
-
-#ifdef PN532COMM
-	Serial.print("copied: ");
-	printHexString(resp, count);
-	Serial.println();
-	Serial.print("count = ");
-	Serial.println(count, DEC);
-#endif
 	return count;
 }
+
+byte PN532::felica_getDataExchangeResponse(const byte fcmd, byte * resp) {
+	byte count = getCommandResponse(COMMAND_InDataExchange, resp);
+	Serial.print("Get ");
+	printHexString(resp, count);
+	Serial.println();
+	lastStatus = resp[0];
+	count = resp[1]-2;
+	memcpy(resp, resp+3, count);
+	return count;
+}
+
 
 byte PN532::listPassiveTarget(byte * data, const byte brty) {
 	byte inidatalen = 0;
@@ -387,7 +385,8 @@ byte PN532::InDataExchange(const byte Tg, const byte fcmd, const byte * data,
 	packet[3] = fcmd;
 	memcpy(packet + 4, data, len);
 
-#ifdef FELICADEBUG
+#ifdef PN532COMM
+	Serial.print(">> ");
 	printHexString(packet, len + 4);
 	Serial.println();
 #endif
