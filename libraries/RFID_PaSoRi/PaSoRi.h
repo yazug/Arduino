@@ -1,7 +1,11 @@
 #ifndef _PaSoRi_H_
 #define _PaSoRi_H_
 
+#if ARDUINO >= 100
+#include <Arduino.h>
+#else
 #include "WProgram.h"
+#endif
 #include <Spi.h>
 #include <Max3421e.h>
 #include <Usb.h>
