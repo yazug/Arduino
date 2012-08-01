@@ -6,7 +6,7 @@
 #else
 #include "WProgram.h"
 #endif
-#include <Spi.h>
+//#include <Spi.h>
 #include <Max3421e.h>
 #include <Usb.h>
 
@@ -23,6 +23,7 @@
 #define POLLING_ANY    0xffff
 #define POLLING_SUICA  0x0003
 #define POLLING_EDY    0xfe00
+#define POLLING_FCF    0xfe00
 
 #define FELICA_CMD_POLLING 0
 #define FELICA_ANS_POLLING 1
@@ -44,32 +45,38 @@
 #define PASORI3_CMD_SEND_PACKET2 0x42
 #define PASORI3_CMD_LIST_PASSIVE 0x4a
 
-
 class PaSoRi {
-  MAX3421E Max;
-  USB Usb;
-  enum { PASORI_S320, PASORI_S330 } mode;
-  EP_RECORD ep_record[5];  //endpoint record structure for PaSoRi
+	MAX3421E Max;
+	USB Usb;
+	enum {
+		PASORI_S320, PASORI_S330
+	} mode;
+	EP_RECORD ep_record[5]; //endpoint record structure for PaSoRi
 
-  byte idm[8];
-  byte pmm[8];
+	byte idm[8];
+	byte pmm[8];
 
-  byte init();
+	byte init();
 
 public:
-  byte begin();
-  void task();
+	byte begin();
+	void task();
 
-  byte poll(unsigned short syscode = POLLING_ANY, byte rfu = 0, byte timeslot = 0);
-  const byte* getIDm() { return idm; }
-  const byte* getPMm() { return pmm; }
-  int read_without_encryption02(int servicecode, byte addr, byte b[16]);
-  byte mobile_felica_push_url(int len, const char *url);
+	byte poll(unsigned short syscode = POLLING_ANY, byte rfu = 0,
+			byte timeslot = 0);
+	const byte* getIDm() {
+		return idm;
+	}
+	const byte* getPMm() {
+		return pmm;
+	}
+	int read_without_encryption02(int servicecode, byte addr, byte b[16]);
+	byte mobile_felica_push_url(int len, const char *url);
 
-  // low level transmission
-  byte send_packet(int len, const byte *data);
-  byte send(int len, byte *buf);
-  byte recv(int len, byte *buf);
+	// low level transmission
+	byte send_packet(int len, const byte *data);
+	byte send(int len, byte *buf);
+	byte recv(int len, byte *buf);
 };
 
 #endif

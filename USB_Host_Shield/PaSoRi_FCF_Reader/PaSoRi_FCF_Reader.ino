@@ -5,10 +5,17 @@
 
 PaSoRi pasori;
 
+template<class T>
+inline Stream & operator<<(Stream & s, T arg) {
+  s.print(arg);
+  return s;
+}
+const char endl = '\n';
+
 void setup() {
-SPI.begin();
+  SPI.begin();
   Serial.begin(115200);
-  Serial.println("Start");
+  Serial << "Start" << endl;
 
   byte rcode = pasori.begin(); // initialize PaSoRi
   if (rcode != 0) {
@@ -16,42 +23,45 @@ SPI.begin();
     Serial.println(rcode, HEX);
     while (1); // stop
   }
-  Serial.println("PaSoRi initialized.");
+  Serial << "PaSoRi initialized." << endl;
 }
 
 void loop()
 {
   byte rcode, i;
   pasori.task(); // call this at every loop
-  static short syscode = POLLING_EDY;
+  static short syscode = POLLING_FCF;
 
   // Polling for SFC or Edy each time
   syscode = syscode == POLLING_SUICA ? POLLING_EDY : POLLING_SUICA;
   rcode = pasori.poll(syscode);
   if (rcode) {
     delay(500);
-  } else {
+  } 
+  else {
     // Polling successful
-    Serial.print("FeliCa detected. IDm=");
+    Serial << "FeliCa detected. IDm = ";
     for (i = 0; i < 8; i++) {
       Serial.print(pasori.getIDm()[i], HEX);
       Serial.print(" ");
     }
-    Serial.print("  PMm=");
+    Serial.print("  PMm = ");
     for (i = 0; i < 8; i++) {
       Serial.print(pasori.getPMm()[i], HEX);
       Serial.print(" ");
     }
-    Serial.println("");
+    Serial << endl;
 
     if (syscode == POLLING_SUICA) {
       // Read SFC (Suica etc.)
       Serial.println("<< SFC >>");
       readSFC();
-    } else {
+    } 
+    else {
       // Read Edy
-      Serial.println("<< Edy >>");
+      Serial.println("<< Edy/FCF >>");
       readEdy();
+      //readFCF();
     }
     delay(3000);
   }
@@ -73,14 +83,14 @@ int readSFC()
     Serial.print(b[11]*256+b[10]);
     Serial.print(" YEN  ");
     if (i == 0) ret = (unsigned int)b[11]*256+b[10];
-    
+
     // date
     Serial.print(2000+((b[4]>>1)&0x7f), DEC);
     Serial.print(".");
     Serial.print(((b[4]&0x01)<<3)|((b[5]>>5)&0x07), DEC);
     Serial.print(".");
     Serial.print(b[5]&0x1F, DEC);
-    
+
     // from/to
     Serial.print(" from:");
     Serial.print(b[6], HEX);
@@ -115,4 +125,35 @@ int readEdy()
   }
   return ret;
 }
+
+int readFCF()
+{
+  byte b[16];
+  int ret = -1;
+  for (int i = 0; i < 4; i++) {
+    int rcode = pasori.read_without_encryption02(0x1a8b,i,b);
+    if (rcode) {
+      Serial.print("rcode = ");
+      Serial.println(rcode, HEX);
+      break;
+    }
+    Serial << i << ": ";
+    for(int p = 0; p < 16; p++) {
+      Serial.print(b[i] >> 8 & 0x0f, HEX);
+      Serial.print(b[i] & 0x0f, HEX);
+      Serial << " ";
+    }
+    Serial << " ";
+    for(int p = 0; p < 16; p++) {
+      if ( isprint(b[i]) ) {
+        Serial.print((char) b[i]);
+      } else {
+        Serial.print(' ');
+      }
+    }
+    Serial << endl;
+  }
+  return ret;
+}
+
 

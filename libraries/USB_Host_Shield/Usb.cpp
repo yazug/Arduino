@@ -314,7 +314,7 @@ void USB::Task( void )      //USB state machine
   static unsigned long delay = 0;
   USB_DEVICE_DESCRIPTOR buf;
   /**/
-    tmpdata = getVbusState();
+	tmpdata = getVbusState();
 //    Serial.print("vbusState: ");
 //    Serial.print(tmpdata, HEX);
 //

@@ -1,7 +1,7 @@
 /* USB Host Shield Board test routine. Runs after assembly to check board functionality */
 
 /* USB related */
-//#include <Spi.h>
+#include <SPI.h>
 #include <Max3421e.h>
 #include <Max3421e_constants.h>
 #include <Usb.h>
@@ -21,6 +21,8 @@ void setup()
   Serial.begin( 115200 );
   //Serial.println("Start");
   //Serial.println( SCK_PIN, DEC );
+  SPI.begin();
+  
   Max.powerOn();
   printProgStr( startBanner );
   printProgStr( anykey_msg );
