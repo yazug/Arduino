@@ -1,6 +1,6 @@
 #include "Wire.h"
 #include "PN532_I2C.h"
-#include "NFCCard.h"
+#include "ISO14443Card.h"
 
 #include "Monitor.h"
 
@@ -16,7 +16,7 @@ const byte factory_a[] = {
   0xaa, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
 long prev;
-NFCCard card;
+ISO14443Card card;
 
 byte pollingTypes[] = {
   2,
@@ -38,7 +38,7 @@ void setup() {
 }
 
 void loop() {
-  NFCCard tmpcard;
+  ISO14443Card tcard;
   byte c, tmp[64];
 
   if ( millis() > prev + 50 ) {
@@ -46,79 +46,76 @@ void loop() {
     if ( nfc.InAutoPoll(2,2,pollingTypes+1,pollingTypes[0]) != 0 && nfc.autoPoll_response(tmp) != 0 ) {
       mon << mon.endl << "Num of tags = " << (int)tmp[0] << mon.endl;
       PN532::printHexString(tmp, 16);
-      card.clear();
       if ( tmp[0] == 1 ) {
-        card.setInListPassiveTarget(tmp[1], tmp[2], tmp+3);
-        mon << "type = " << card.type << mon.endl;
+        tcard.set(tmp[1], tmp+3);
+        mon << "type = " << tcard.type << mon.endl;
       }
-
-      if ( card.type == 0x11 ) {
-        mon << "FeliCa" << mon.endl 
-          << " ID: " << mon.printHexString( card.IDm(), 8) << mon.endl;
-        mon << "Pad: " << mon.printHexString( card.PMm(), 8) << mon.endl;
-        //        mon << mon.printHexString( card.SystemCode(), 2) << mon.endl;
-        int len;
-        // Polling command, with system code request.
-        len = nfc.felica_Polling(tmp, 0x00fe);
-        mon << mon.printHexString(tmp, len) << mon.endl;
-        //
-        /*
-        mon << "Request System Code: " << mon.endl;
-        len = nfc.felica_RequestSystemCode(tmp);
-        mon << mon.printHexString((word *)tmp, len) <<mon.endl;
-        */
-        // low-byte first service code.
-        // Suica, Nimoca, etc. 0x090f system 0x0300
-        // Edy service 0x170f (0x1317), system 0x00FE // 8280
-        // FCF 1a8b
-        mon << "Request Service code and read blocks: " << mon.endl;
-        word scodes[] = { 
-          0x1a8b, 0x170f, 0x1317, 0x1713, 0x090f, 0xffff
-        };
-        int snum = 1;
-        for(int i = 0; i < snum; i++) {
-          word scver = nfc.felica_RequestService(0x1a8b);
-          mon << mon.printHexString(scodes[i]) << ": " 
-            << mon.printHexString(scver) << mon.endl;
-          if ( scodes[i] != 0xffff && scver != 0xffff ) {
-            byte blks[2];
-            for (word blkno = 0; blkno < 4; blkno++) {
-              blks[0] = (blkno | 0x8000) >> 8 & 0xff;
-              blks[1] = (blkno | 0x8000) & 0xff;
-              c = nfc.felica_ReadWithoutEncryption(tmp, scodes[i], 1, blks);
-              mon << mon.printHexString(blks+(blkno*2), 2) << ": ";
-              if ( c != 0 ) {
-                mon << mon.printHexString(tmp, c*16) << "  ";
-                mon.print(tmp, c*16, 255);
-                mon << mon.endl;
+      if ( tcard != card ) { 
+        card = tcard;
+        if ( card.type == 0x11 ) {
+          mon << "FeliCa" << mon.endl 
+            << " ID: " << mon.printHexString( card.IDm, 8) << mon.endl;
+          mon << "Pad: " << mon.printHexString( card.PMm, 8) << mon.endl;
+          //        mon << mon.printHexString( card.SystemCode(), 2) << mon.endl;
+          int len;
+          // Polling command, with system code request.
+          word syscode = 0x00FE;
+          len = nfc.felica_Polling(tmp, syscode);
+          mon << "System code " << (syscode>>4 & 0x0f) <<  (syscode & 0x0f) 
+              << (syscode>>12& 0x0f) << (syscode >> 8 & 0x0f) 
+              <<" specific IDm " << mon.printHexString(tmp, 8) << mon.endl;
+          // low-byte first service code.
+          // Suica, Nimoca, etc. 0x090f system 0x0300
+          // Edy service 0x170f (0x1317), system 0x00FE // 8280
+          // FCF 1a8b
+          mon << "Request Service code and read blocks: " << mon.endl;
+          word scodes[] = { 
+            0x1a8b, 0x170f, 0x090f, 0xffff
+          };
+          int snum = 1;
+          for(int i = 0; i < snum; i++) {
+            word scver = nfc.felica_RequestService(0x1a8b);
+            mon << mon.printHexString(scodes[i]) << ": " 
+              << mon.printHexString(scver) << mon.endl;
+            if ( scodes[i] != 0xffff && scver != 0xffff ) {
+              word blks[1];
+              for (word blkno = 0; blkno < 4; blkno++) {
+                blks[0] = blkno;
+                c = nfc.felica_ReadWithoutEncryption(tmp, scodes[i], 1, blks);
+                mon << mon.printHexString((byte*) &blks[0], 2) << ": ";
+                if ( c != 0 ) {
+                  mon << mon.printHexString(tmp, c*16) << "  ";
+                  mon.print(tmp, c*16, 255);
+                  mon << mon.endl;
+                }
+                //mon << mon.endl;
               }
-              mon << mon.endl;
             }
+          }
+        } 
+        else if ( card.type == 0x10 ) {
+          mon << "Mifare" << mon.endl << "  ID: ";
+          mon.printHexString(card.UID, card.IDLength);
+          mon << mon.endl;
+          if ( nfc.mifare_AuthenticateBlock(card.UID, card.IDLength, 4,
+          IizukaKey_b) ) {
+            mon << "Auth Success." << mon.endl;
+            nfc.mifare_ReadDataBlock(4, tmp);
+            mon << mon.printHexString(tmp, 16) << "  ";
+            mon << mon.print(tmp, 16, 255) << mon.endl;
+            nfc.mifare_ReadDataBlock(5, tmp);
+            mon << mon.printHexString(tmp, 16) << "  ";
+            mon << mon.print(tmp, 16, 255) << mon.endl;
+            nfc.mifare_ReadDataBlock(6, tmp);
+            mon << mon.printHexString(tmp, 16) << "  ";
+            mon << mon.print(tmp, 16, 255) << mon.endl;
+          } 
+          else {
+            mon << "Failure." << mon.endl;
           }
         }
       } 
-      else if ( card.type == 0x10 ) {
-        mon << "Mifare" << mon.endl << "  ID: ";
-        mon.printHexString(card.UID(), card.IDLength());
-        mon << mon.endl;
-        if ( nfc.mifare_AuthenticateBlock(card.UID(), card.IDLength(), 4,
-        IizukaKey_b) ) {
-          mon << "Auth Success." << mon.endl;
-          nfc.mifare_ReadDataBlock(4, tmp);
-          mon << mon.printHexString(tmp, 16) << "  ";
-          mon << mon.print(tmp, 16, 255) << mon.endl;
-          nfc.mifare_ReadDataBlock(5, tmp);
-          mon << mon.printHexString(tmp, 16) << "  ";
-          mon << mon.print(tmp, 16, 255) << mon.endl;
-          nfc.mifare_ReadDataBlock(6, tmp);
-          mon << mon.printHexString(tmp, 16) << "  ";
-          mon << mon.print(tmp, 16, 255) << mon.endl;
-        } 
-        else {
-          mon << "Failure." << mon.endl;
-        }
-      }
-    } 
+    }
   }
   delay(250);
 }
@@ -152,6 +149,7 @@ void PN532_init() {
   nfc.SAMConfiguration();
 
 }
+
 
 
 

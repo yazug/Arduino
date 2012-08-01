@@ -244,11 +244,11 @@ public:
 		byte n = resp[9];
 		memcpy(resp, resp + 10, n * 2);
 		return n;
-
 	}
 
+	// Block list accepts only two byte codes.
 	byte felica_ReadWithoutEncryption(byte * resp,
-			const word servcode, const byte blknum, const byte blklist[]) {
+			const word servcode, const byte blknum, const word blklist[]) {
 		resp[0] = FELICA_CMD_READWITHOUTENCRYPTION;
 		memcpy(resp + 1, IDData, 8);
 		resp[9] = 1;
@@ -256,17 +256,11 @@ public:
 		resp[11] = servcode >> 8 & 0xff;
 		resp[12] = blknum;
 		byte pos = 13;
-		for (int i = 0; i < blknum;) {
-			if (blklist[i] & 0x80) {
-				// two bytes
-				resp[pos++] = blklist[i++];
-				resp[pos++] = blklist[i++];
-			} else {
-				// three bytes
-				resp[pos++] = blklist[i++];
-				resp[pos++] = blklist[i++];
-				resp[pos++] = blklist[i++];
-			}
+		// only two byte array.
+		for (int i = 0; i < blknum; i++) {
+			// two bytes
+			resp[pos++] = (blklist[i] | 0x8000) >> 8 & 0xff ;
+			resp[pos++] = blklist[i] & 0xff;
 		}
 		// pos has been incremented after the last substitution
 		byte count = communicateThru(resp, pos);
