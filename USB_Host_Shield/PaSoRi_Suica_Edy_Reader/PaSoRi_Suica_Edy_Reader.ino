@@ -1,5 +1,5 @@
 #include <SPI.h>
-#include <Usb.h>
+#include <Usb_HSv10.h>
 
 #include <PaSoRi.h>
 

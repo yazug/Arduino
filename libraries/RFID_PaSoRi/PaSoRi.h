@@ -7,8 +7,8 @@
 #include "WProgram.h"
 #endif
 //#include <Spi.h>
-#include <Max3421e.h>
-#include <Usb.h>
+#include <max3421e.h>
+#include <Usb_HSv10.h>
 
 //#define DEBUG
 
