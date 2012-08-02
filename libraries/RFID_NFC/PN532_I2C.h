@@ -180,7 +180,7 @@ public:
 	byte felica_getDataExchangeResponse(const byte fcmd, byte * resp);
 
 	byte listPassiveTarget(byte * data, const byte brty =
-			BaudrateType_106kbitTypeA);
+			BaudrateType_106kbitTypeA, const word syscode = 0xffff);
 
 	byte mifare_AuthenticateBlock(const byte * uid, byte uidLen, word blockNumber,
 			const byte * keyData);
@@ -233,6 +233,18 @@ public:
 		}
 		word servcodever = tmp[11];
 		return (servcodever<<8) + tmp[10];
+	}
+
+	byte felica_XRequestService(byte * resp, const word servcode) {
+		resp[0] = 1;
+		resp[1] = servcode & 0xff;
+		resp[2] = servcode >> 8 & 0xff;
+		byte count = felica_DataExchange(FELICA_CMD_REQUESTSERVICE, resp, 3);
+
+		if ( (count = felica_getDataExchangeResponse(FELICA_CMD_REQUESTSERVICE, resp)) ) {
+			return count;
+		}
+		return 0;
 	}
 
 

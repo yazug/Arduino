@@ -10,8 +10,8 @@
 
 //#define PN532DEBUG
 //#define MIFAREDEBUG
-//#define PN532COMM
-//#define FELICADEBUG
+#define PN532COMM
+#define FELICADEBUG
 
 PN532::PN532(byte addr, byte irq, byte rst) :
 		i2c_addr(addr), pin_irq(irq), pin_rst(rst), lastStatus(0), chksum(
@@ -323,12 +323,14 @@ byte PN532::felica_getDataExchangeResponse(const byte fcmd, byte * resp) {
 }
 
 
-byte PN532::listPassiveTarget(byte * data, const byte brty) {
+byte PN532::listPassiveTarget(byte * data, const byte brty, const word syscode) {
 	byte inidatalen = 0;
 	switch (brty) {
 	case BaudrateType_212kbitFeliCa:
 		inidatalen = 5;
-		memcpy(data, "\x00\xff\xff\x00\x00", inidatalen);
+		memcpy(data, "\x00\xfe\x00\x00\x00", inidatalen);
+//		data[1] = syscode>>8;
+//		data[2] = syscode&0xff;
 		break;
 	default:
 		break;
@@ -341,7 +343,7 @@ byte PN532::listPassiveTarget(byte * data, const byte brty) {
 	}
 
 	byte count = getCommandResponse(COMMAND_InListPassivTarget, packet);
-#ifdef MIFAREDEBUG
+#ifdef FELICADEBUG
 	Serial.print("InListPassiveTarget response: ");
 	printHexString(packet, count);
 	Serial.println();
