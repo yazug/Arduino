@@ -1,6 +1,6 @@
 #include "Wire.h"
 #include "PN532_I2C.h"
-#include "ISO14443Card.h"
+#include "ISO14443.h"
 
 #include "Monitor.h"
 
@@ -11,7 +11,7 @@ PN532 nfc(PN532::I2C_ADDRESS, IRQ, RESET);
 Monitor mon(Serial);
 
 long prev;
-ISO14443Card card;
+ISO14443 card;
 
 byte pollingTypes[] = {
   2,
@@ -33,7 +33,7 @@ void setup() {
 }
 
 void loop() {
-  ISO14443Card tcard;
+  ISO14443 tcard;
   byte c, tmp[64];
 
   if ( millis() <= prev + 1000 ) 
@@ -56,21 +56,19 @@ void loop() {
         int len;
         word syscode = 0x00FE;
         nfc.listPassiveTarget(tmp, nfc.BaudrateType_212kbitFeliCa, syscode);
-        // Polling command, with system code request.
-        /*
-        len = nfc.felica_Polling(tmp, syscode);
-        mon << "System code " << (syscode>>4 & 0x0f) <<  (syscode & 0x0f) 
-          << (syscode>>12& 0x0f) << (syscode >> 8 & 0x0f) 
-            <<" specific IDm " << mon.printHexString(tmp, 8) << mon.endl;
-            */
         // low-byte first service code.
         // Suica, Nimoca, etc. 0x090f system 0x0300
         // Edy service 0x170f (0x1317), system 0x00FE // 8280
         // FCF 1a8b
+        len = nfc.felica_Polling(tmp, syscode);
+        mon << "polling: " << len << mon.endl;
+
         mon << "Request Service code and read blocks: " << mon.endl;
         word scver = nfc.felica_XRequestService(tmp,0x1a8b);
         mon << mon.printHexString(0x1a8b) << ": " 
-          << mon.printHexString(scver) << mon.endl;
+          << mon.print(scver, HEX) << mon.endl;
+        if ( scver ) {
+        }
       } 
     } 
   }

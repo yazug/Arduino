@@ -28,7 +28,6 @@ private:
 
 protected:
 	Stream & port;
-	int curr_base;
 
 public:
 	static const char endl = '\n';
@@ -37,10 +36,10 @@ public:
 	static int asHexadecimal(char * str, int offset);
 	static int asBytes(byte[], int limit = 0);
 
-	Monitor(Stream & st) : port(st), ser_class(UNDEFINED), curr_base(DEC) { }
-	Monitor(HardwareSerial & st) : port(st), ser_class(HARDWARESERIAL), curr_base(DEC) { }
+	Monitor(Stream & st) : port(st), ser_class(UNDEFINED) { }
+	Monitor(HardwareSerial & st) : port(st), ser_class(HARDWARESERIAL) { }
 #ifdef SoftwareSerial_h
-	Monitor(SoftwareSerial & st) : port(st), ser_class(SOFTWARESERIAL), curr_base(DEC) { }
+	Monitor(SoftwareSerial & st) : port(st), ser_class(SOFTWARESERIAL) { }
 #endif
 //	~Monitor() { }
 
@@ -126,21 +125,14 @@ public:
 	boolean wait(const byte msg[], int len, long limit);
 
 //	static char * byteString(char * buf, const byte[], const int, const byte = HEX);
-	const Monitor & printHexString(const byte array[], const int n, const boolean gap = true);
-	const Monitor & printHexString(const word array[], const int n, const boolean gap = true);
-	inline const Monitor & printHexString(const word val) {
-		return printHexString((word*)&val, 1, false);
-	}
-
+	const Monitor & printArray(const char array[], const int n);
+	const Monitor & printArray(const byte array[], const int n, const byte base = HEX);
+	const Monitor & printArray(const word array[], const int n, const byte base = HEX);
 
 	//byte readLine(byte buf[], int lim, const char delims[]);
 	int readToken(char buf[], long timeout = 50);
 	int readNumber(char buf[], long timeout = 50);
 
-	const Monitor & setbase(const int b) {
-		curr_base = b;
-		return *this;
-	}
 };
 
 template<class T>

@@ -25,37 +25,6 @@
  }
  */
 
-void Monitor::printNumber(byte n, byte base) {
-	byte buf[8 * sizeof(long)]; // Assumes 8-bit chars.
-	unsigned long i = 0;
-	int d = 255;
-
-	if (base == 255) {
-		if (isprint(n)) {
-			print((char) n);
-			print(' ');
-		} else {
-			/*
-			print("\\x");
-			print(n >> 4 & 0x0f, base);
-			print(n & 0x0f, base);
-			*/
-			print('.');
-		}
-	} else {
-		while (d > 0) {
-			buf[i++] = n % base;
-			n /= base;
-			d /= base;
-		}
-
-		for (; i > 0; i--)
-			print(
-					(char) (buf[i - 1] < 10 ?
-							'0' + buf[i - 1] : 'A' + buf[i - 1] - 10));
-	}
-}
-
 unsigned long Monitor::asBCD(unsigned long lval) {
 	unsigned long tmp;
 	byte * p = (byte*) (&tmp);
@@ -98,26 +67,39 @@ int Monitor::asHexadecimal(char * str, int limit) {
 	return count;
 }
 
-const Monitor & Monitor::printHexString(const word array[], const int size, const boolean gap) {
+const Monitor & Monitor::printArray(const word array[], const int size, const byte base) {
 	int i;
 	for (i = 0; i < size; i++) {
-		if (i > 0 && gap)
+		if (i > 0)
 			print(' ');
-		print(array[i] >> 12 & 0x0f, curr_base);
-		print(array[i] >> 8 & 0x0f, curr_base);
-		print(array[i] >> 4 & 0x0f, curr_base);
-		print(array[i] & 0x0f, curr_base);
+		print(array[i] >> 12 & 0x0f, base);
+		print(array[i] >> 8 & 0x0f, base);
+		print(array[i] >> 4 & 0x0f, base);
+		print(array[i] & 0x0f, base);
 	}
 	return *this;
 }
 
-const Monitor & Monitor::printHexString(const byte array[], const int size, const boolean gap) {
+const Monitor & Monitor::printArray(const byte array[], const int size, const byte base) {
 	int i;
 	for (i = 0; i < size; i++) {
-		if (i > 0 && gap)
+		if (i > 0)
 			print(' ');
-		print(array[i] >> 4, curr_base);
-		print(array[i] & 0x0f, curr_base);
+		print(array[i] >> 4, base);
+		print(array[i] & 0x0f, base);
+	}
+	return *this;
+}
+
+const Monitor & Monitor::printArray(const char array[], const int size) {
+	int i;
+	for (i = 0; i < size; i++) {
+		if (i > 0)
+			print(' ');
+		if ( isprint(array[i]) )
+			print(array[i]);
+		else
+			print(' ');
 	}
 	return *this;
 }

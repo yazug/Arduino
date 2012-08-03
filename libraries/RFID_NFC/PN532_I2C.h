@@ -130,7 +130,7 @@ public:
 	static const byte FELICA_CMD_WRITEWITHOUTENCRYPTION = 0x08;
 	static const byte FELICA_CMD_REQUESTSYSTEMCODE = 0x0c;
 
-	static void printHexString(const byte * a, byte len) {
+	static void printArray(const byte * a, byte len) {
 		for (int i = 0; i < len; i++) {
 			Serial.print(a[i] >> 4 & 0x0f, HEX);
 			Serial.print(a[i] & 0x0f, HEX);
@@ -143,18 +143,14 @@ public:
 	PN532(byte addr = I2C_ADDRESS, byte irq = 0xff, byte rst = 0xff);
 
 	void init();
-	void begin() {
-		init();
-	}
+	inline void begin() { init(); }
 
 	unsigned long getFirmwareVersion();
-	boolean SAMConfiguration(byte mode = 0x01, byte timeout = 0x14,
-			byte use_irq = 0x01);
+	boolean SAMConfiguration(byte mode = 0x01, byte timeout = 0x14, byte use_irq = 0x01);
 
 	static const byte BaudrateType_106kbitTypeA = 0x00;
 	static const byte BaudrateType_212kbitFeliCa = 0x01;
-	byte InListPassiveTarget(const byte maxtg, const byte brty, byte * data,
-			const byte initlen, const long & wmillis = 100);
+
 	static const byte Type_GenericPassiveTypeA = 0x00;
 	static const byte Type_GenericPassive212kbFeliCa = 0x01;
 	static const byte Type_GenericPassive424kbFeliCa = 0x02;
@@ -162,6 +158,9 @@ public:
 	static const byte Type_Mifare = 0x10;
 	static const byte Type_FeliCa212kb = 0x11;
 	static const byte Type_FeliCa424kb = 0x12;
+
+	byte InListPassiveTarget(const byte maxtg, const byte brty, byte * data,
+			const byte initlen, const long & wmillis = 100);
 	byte InAutoPoll(const byte pollnr, const byte per, const byte * types,
 			const byte typeslen);
 	inline byte autoPoll_response(byte * resp, const long & waitmillis = 1000) {
@@ -169,16 +168,14 @@ public:
 			return resp[0];
 		return 0;
 	}
+
 	byte InDataExchange(const byte Tg, const byte * data, const byte length);
-	byte InDataExchange(const byte Tg, const byte fcmd, const byte * data,
-			const byte len);
+//	byte InDataExchange(const byte Tg, const byte fcmd, const byte * data, const byte len);
 	byte InDataExchange(const byte Tg, const byte micmd, const byte blkaddr,
 			const byte * data, const byte datalen);
 
 	byte getCommandResponse(const byte, byte * resp, const long & waitmillis =
 			1000);
-	byte felica_getDataExchangeResponse(const byte fcmd, byte * resp);
-
 	byte listPassiveTarget(byte * data, const byte brty =
 			BaudrateType_106kbitTypeA, const word syscode = 0xffff);
 
@@ -186,104 +183,17 @@ public:
 			const byte * keyData);
 	byte mifare_ReadDataBlock(uint8_t blockNumber, uint8_t * data);
 
-	byte felica_DataExchange(const byte cmd, const byte * data, const byte len);
-
 	byte InCommunicateThru(const byte * data, const byte len);
 	byte communicateThru(byte * data, const byte len);
 
-	byte felica_Polling(byte * resp, const word syscode = 0xffff) {
-		// Polling command, with system code request.
-		resp[0] = FELICA_CMD_POLLING;
-		resp[1] = syscode & 0xff;
-		resp[2] = syscode >> 8 & 0xff;
-		resp[3] = 0x01; // request code: request sys code
-		resp[4] = 0; // time slot #
-		byte cnt = communicateThru(resp, 5);
-		if (resp[0] == FELICA_CMD_POLLING + 1 ) {
-			memcpy(resp, resp+1, cnt-9);
-			IDLength = 8;
-			memcpy(IDData, resp, cnt-9);
-			return cnt;
-		}
-		IDLength = 0;
-		return 0;
-	}
-
-	byte felica_RequestService(byte * resp, const word servcodes[], const byte servnum) {
-		resp[0] = FELICA_CMD_REQUESTSERVICE;
-		memcpy(resp + 1, IDData, 8);
-		resp[9] = servnum;
-		for (int i = 0; i < servnum; i++) {
-			resp[10 + 2 * i] = servcodes[i] & 0xff;
-			resp[11 + 2 * i] = servcodes[i] >> 8 & 0xff;
-		}
-		byte count = communicateThru(resp, 10 + 2 * servnum);
-		if (resp[0] == FELICA_CMD_REQUESTSERVICE + 1 && count >= 10) {
-			byte svnum = resp[9];
-			memcpy(resp, resp + 10, svnum * 2);
-			return svnum;
-		}
-		return 0;
-	}
-
-	word felica_RequestService(const word servcode) {
-		byte tmp[14];
-		if ( !felica_RequestService(tmp, (word*)&servcode, 1) ) {
-			return 0xffff;
-		}
-		word servcodever = tmp[11];
-		return (servcodever<<8) + tmp[10];
-	}
-
-	byte felica_XRequestService(byte * resp, const word servcode) {
-		resp[0] = 1;
-		resp[1] = servcode & 0xff;
-		resp[2] = servcode >> 8 & 0xff;
-		byte count = felica_DataExchange(FELICA_CMD_REQUESTSERVICE, resp, 3);
-
-		if ( (count = felica_getDataExchangeResponse(FELICA_CMD_REQUESTSERVICE, resp)) ) {
-			return count;
-		}
-		return 0;
-	}
-
-
-	byte felica_RequestSystemCode(byte * resp) {
-		resp[0] = FELICA_CMD_REQUESTSYSTEMCODE;
-		memcpy(resp + 1, IDData, 8);
-		if (communicateThru(resp, 9) == 0)
-			return 0;
-		byte n = resp[9];
-		memcpy(resp, resp + 10, n * 2);
-		return n;
-	}
-
+	//	byte felica_DataExchange(const byte cmd, const byte * data, const byte len);
+	//	byte felica_getDataExchangeResponse(const byte fcmd, byte * resp);
+	byte felica_Polling(byte * resp, const word syscode = 0xffff);
+	byte felica_RequestService(byte * resp, const word servcodes[], const byte servnum);
+	word felica_RequestService(const word servcode);
+	byte felica_RequestSystemCode(byte * resp);
 	// Block list accepts only two byte codes.
-	byte felica_ReadWithoutEncryption(byte * resp,
-			const word servcode, const byte blknum, const word blklist[]) {
-		resp[0] = FELICA_CMD_READWITHOUTENCRYPTION;
-		memcpy(resp + 1, IDData, 8);
-		resp[9] = 1;
-		resp[10] = servcode & 0xff;
-		resp[11] = servcode >> 8 & 0xff;
-		resp[12] = blknum;
-		byte pos = 13;
-		// only two byte array.
-		for (int i = 0; i < blknum; i++) {
-			// two bytes
-			resp[pos++] = (blklist[i] | 0x8000) >> 8 & 0xff ;
-			resp[pos++] = blklist[i] & 0xff;
-		}
-		// pos has been incremented after the last substitution
-		byte count = communicateThru(resp, pos);
-		if (resp[9] == 0) {
-			byte blocks = resp[11];
-			memcpy(resp, resp + 12, blocks * 16);
-			return blocks;
-		} else {
-			return 0;
-		}
-	}
+	byte felica_ReadWithoutEncryption(byte * resp, const word servcode, const byte blknum, const word blklist[]);
 
 
 };

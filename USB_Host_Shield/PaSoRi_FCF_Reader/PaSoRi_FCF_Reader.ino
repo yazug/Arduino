@@ -2,7 +2,7 @@
 #include <Usb_HSv10.h>
 
 #include <PaSoRi.h>
-#include "ISO14443Card.h"
+#include "ISO14443.h"
 
 PaSoRi pasori;
 const word syscode = POLLING_FCF;

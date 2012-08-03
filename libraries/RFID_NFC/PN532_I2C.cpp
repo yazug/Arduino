@@ -10,12 +10,11 @@
 
 //#define PN532DEBUG
 //#define MIFAREDEBUG
-#define PN532COMM
-#define FELICADEBUG
+//#define PN532COMM
+//#define FELICADEBUG
 
 PN532::PN532(byte addr, byte irq, byte rst) :
-		i2c_addr(addr), pin_irq(irq), pin_rst(rst), lastStatus(0), chksum(
-				0) {
+		i2c_addr(addr), pin_irq(irq), pin_rst(rst), lastStatus(0), chksum(0) {
 	pinMode(pin_irq, INPUT);
 	if (pin_rst != 0xff)
 		pinMode(pin_rst, OUTPUT);
@@ -274,7 +273,7 @@ byte PN532::getCommandResponse(const byte cmd, byte * resp,
 	byte count = receive(packet);
 //#define PN532DEBUG
 #ifdef PN532COMM
-	Serial.print("<< ");
+	Serial.print(">> ");
 	printHexString(packet, count + 7);
 	Serial.println();
 #endif
@@ -298,7 +297,9 @@ byte PN532::getCommandResponse(const byte cmd, byte * resp,
 #endif
 	// checksum is checked in receive.
 	if (packet[6 + count] != 0) {
+#ifdef PN532DEBUG
 		Serial.println("termination 0x00 error");
+#endif
 		return 0;
 	}
 #ifdef PN532DEBUG
@@ -311,17 +312,20 @@ byte PN532::getCommandResponse(const byte cmd, byte * resp,
 	return count;
 }
 
+/*
 byte PN532::felica_getDataExchangeResponse(const byte fcmd, byte * resp) {
 	byte count = getCommandResponse(COMMAND_InDataExchange, resp);
-	Serial.print("Get ");
+#ifdef FELICADEBUG
+	Serial.print("FeliCa >> ");
 	printHexString(resp, count);
 	Serial.println();
+#endif
 	lastStatus = resp[0];
 	count = resp[1]-2;
 	memcpy(resp, resp+3, count);
 	return count;
 }
-
+*/
 
 byte PN532::listPassiveTarget(byte * data, const byte brty, const word syscode) {
 	byte inidatalen = 0;
@@ -329,8 +333,8 @@ byte PN532::listPassiveTarget(byte * data, const byte brty, const word syscode) 
 	case BaudrateType_212kbitFeliCa:
 		inidatalen = 5;
 		memcpy(data, "\x00\xfe\x00\x00\x00", inidatalen);
-//		data[1] = syscode>>8;
-//		data[2] = syscode&0xff;
+		data[1] = syscode&0xff;
+		data[2] = syscode>>8;
 		break;
 	default:
 		break;
@@ -377,12 +381,12 @@ byte PN532::InDataExchange(const byte Tg, const byte * data,
 	}
 	return 1;
 }
-
+/*
 byte PN532::InDataExchange(const byte Tg, const byte fcmd, const byte * data,
 		const byte len) {
 	// Prepare a Felica command //
-	packet[0] = COMMAND_InDataExchange; /* Data Exchange Header */
-	packet[1] = Tg; /* target number */
+	packet[0] = COMMAND_InDataExchange; // Data Exchange Header
+	packet[1] = Tg; // target number
 	packet[2] = len+2;
 	packet[3] = fcmd;
 	memcpy(packet + 4, data, len);
@@ -398,6 +402,7 @@ byte PN532::InDataExchange(const byte Tg, const byte fcmd, const byte * data,
 	}
 	return 1;
 }
+*/
 
 // InDataExchange for Mifare
 byte PN532::InDataExchange(const byte Tg, const byte micmd, const byte blkaddr,
@@ -511,60 +516,32 @@ byte PN532::mifare_ReadDataBlock(uint8_t blockNumber, uint8_t * data) {
 	return 16;
 }
 
+/*
 byte PN532::felica_DataExchange(const byte cmd, const byte * data,
 		const byte len) {
-	/* CommunicateThruEX */
-	/*
-	 buf[0] = 0xd4;
-	 buf[1] = 0xa0;
-	 buf[2] = (uint8_t) ((commandTimeout >> 0) & 0xff);
-	 buf[3] = (uint8_t) ((commandTimeout >> 8) & 0xff);
-	 buf[4] = (uint8_t) (commandLen + 1);
-	 memcpy(buf + 5, command, commandLen);
-	 */
-
-	/* Prepare the command */
+	// Prepare the command
 	packet[0] = COMMAND_InDataExchange;
-	packet[1] = 1; /* Card number */
+	packet[1] = 1; // Card number
 	packet[2] = len + 2; //2+8; //length of data + 2
-	packet[3] = cmd; /* FeliCa card command = 0xa0 */
+	packet[3] = cmd; // FeliCa card command = 0xa0
 	memcpy(packet + 4, data, len);
 
 #ifdef FELICADEBUG
-	Serial.print("FeliCa command: ");
-	Serial.print(cmd, HEX);
-	Serial.print(" count = ");
-	Serial.println(len + 4, HEX);
+	Serial.print("<< ");
 	printHexString(packet, len + 4);
 	Serial.println();
 #endif
 
-	/* Send the command */
+	// Send the command
 	sendcc(packet, len + 4);
 	if (!checkACKframe()) {
 		return 0;
 	}
-
-	/* Read the response packet */
-	int c;
-	if (!(c = getCommandResponse(COMMAND_InDataExchange, packet))) {
-		return 0;
-	}
-#ifdef FELICADEBUG
-	Serial.print("Response for command: ");
-	Serial.print("count = ");
-	Serial.println(c, HEX);
-	printHexString(packet, c);
-	Serial.println();
-#endif
 	return 1;
 }
-
+*/
 
 byte PN532::InCommunicateThru(const byte * data, const byte len) {
-	/* CommunicateThruEX */
-
-	/* Prepare the command */
 	packet[0] = COMMAND_InCommunicateThru;
 	packet[1] = len+1;
 	memcpy(packet + 2, data, len);
@@ -586,13 +563,28 @@ byte PN532::InCommunicateThru(const byte * data, const byte len) {
 	return 1;
 }
 
-// Polling, with system code request.
-// memcpy(tmp, "\x06\x00\xff\xff\x01\x00", 6);
-// System: ANA Edy = 80 82, FCF Kyutech Edy = 80 9E
+byte PN532::felica_Polling(byte * resp, const word syscode) {
+	// Polling command, with system code request.
+	resp[0] = FELICA_CMD_POLLING;
+	resp[1] = syscode & 0xff;
+	resp[2] = syscode >> 8 & 0xff;
+	resp[3] = 0x01; // request code: request sys code
+	resp[4] = 0; // time slot #
+	byte cnt = communicateThru(resp, 5);
+	if (resp[0] == FELICA_CMD_POLLING + 1 ) {
+		memcpy(resp, resp+1, cnt-9);
+		IDLength = 8;
+		memcpy(IDData, resp, cnt-9);
+		return cnt;
+	}
+	IDLength = 0;
+	return 0;
+}
 
 byte PN532::communicateThru(byte * data, const byte len) {
 	InCommunicateThru(data, len);
 	/* Read the response packet */
+
 	int count;
 	if (!(count = getCommandResponse(COMMAND_InCommunicateThru, packet))) {
 		return 0;
@@ -613,3 +605,66 @@ byte PN532::communicateThru(byte * data, const byte len) {
 	return count;
 }
 
+byte PN532::felica_RequestService(byte * resp, const word servcodes[],
+		const byte servnum) {
+	resp[0] = FELICA_CMD_REQUESTSERVICE;
+	memcpy(resp + 1, IDData, 8);
+	resp[9] = servnum;
+	for (int i = 0; i < servnum; i++) {
+		resp[10 + 2 * i] = servcodes[i] & 0xff;
+		resp[11 + 2 * i] = servcodes[i] >> 8 & 0xff;
+	}
+	byte count = communicateThru(resp, 10 + 2 * servnum);
+	if (resp[0] == FELICA_CMD_REQUESTSERVICE + 1 && count >= 10) {
+		byte svnum = resp[9];
+		memcpy(resp, resp + 10, svnum * 2);
+		return svnum;
+	}
+	return 0;
+}
+
+word PN532::felica_RequestService(const word servcode) {
+	byte tmp[14];
+	if ( !felica_RequestService(tmp, (word*)&servcode, 1) ) {
+		return 0xffff;
+	}
+	word servcodever = tmp[11];
+	return (servcodever<<8) + tmp[10];
+}
+
+byte PN532::felica_RequestSystemCode(byte * resp) {
+	resp[0] = FELICA_CMD_REQUESTSYSTEMCODE;
+	memcpy(resp + 1, IDData, 8);
+	if (communicateThru(resp, 9) == 0)
+		return 0;
+	byte n = resp[9];
+	memcpy(resp, resp + 10, n * 2);
+	return n;
+}
+
+// Block list accepts only two byte codes.
+byte PN532::felica_ReadWithoutEncryption(byte * resp,
+		const word servcode, const byte blknum, const word blklist[]) {
+	resp[0] = FELICA_CMD_READWITHOUTENCRYPTION;
+	memcpy(resp + 1, IDData, 8);
+	resp[9] = 1;
+	resp[10] = servcode & 0xff;
+	resp[11] = servcode >> 8 & 0xff;
+	resp[12] = blknum;
+	byte pos = 13;
+	// only two byte array.
+	for (int i = 0; i < blknum; i++) {
+		// two bytes
+		resp[pos++] = (blklist[i] | 0x8000) >> 8 & 0xff ;
+		resp[pos++] = blklist[i] & 0xff;
+	}
+	// pos has been incremented after the last substitution
+	byte count = communicateThru(resp, pos);
+	if (resp[9] == 0) {
+		byte blocks = resp[11];
+		memcpy(resp, resp + 12, blocks * 16);
+		return blocks;
+	} else {
+		return 0;
+	}
+}
