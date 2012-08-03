@@ -8,9 +8,29 @@
 #ifndef ISO14443Card_H_
 #define ISO14443Card_H_
 
-#include "PN532_I2C.h"
+//#include "PN532_I2C.h"
+static const byte TypeA = 0x00;
+static const byte TypeF_212kb = 0x01;
+static const byte TypeF_424kb = 0x02;
+static const byte TypeB = 0x03;
+static const byte Type_Mifare = 0x10;
+static const byte Type_FeliCa212kb = 0x11;
+static const byte Type_FeliCa424kb = 0x12;
 
-struct FCF {
+
+char kana[][4] = {
+  "xx", "xx", "xx", "xx", "xx", "xx", "wo", "xa",
+  "xi", "xu", "xe", "xo", "ya", "yu", "yo", "xtu",
+  "-", "A", "I", "U", "E", "O", "KA", "KI",
+  "KU", "KE", "KO", "SA", "SHI", "SU", "SE", "SO",
+  "aaa", "bbb", "ccc", "ddd", "eee", "NA", "NI", "NU",
+  "NE", "NO", "HA", "HI", "FU", "HE", "HO", "MA",
+  "MI", "MU", "ME", "MO", "YA", "YU", "YO", "RA",
+  "RI", "RU", "RE", "RO", "WA", "NN", "\"", "o",
+};
+
+
+struct TFCF {
     byte res0[2];
     char id[8];
     byte res1[4];
@@ -22,7 +42,7 @@ struct FCF {
     byte res4[8];
 };
 
-struct MagTape {
+struct TMagTape {
   char idtype[2];
   char id[8];
   char issue[1];
@@ -69,7 +89,7 @@ struct ISO14443Card {
   void set(const ISO14443Card & card) {
     type = card.type;
     switch(type) {
-    case 0x11: // Felica
+    case Type_FeliCa212kb: // Felica
       memcpy(rawIDData, card.rawIDData, 18);
       break;
     default: // Mifare
@@ -88,15 +108,15 @@ struct ISO14443Card {
     type = tid;
     byte len;
     switch (type) {
-      case PN532::Type_FeliCa212kb:
-      case PN532::Type_FeliCa424kb:
+      case Type_FeliCa212kb:
+      case Type_FeliCa424kb:
       len = raw[1];
       memcpy(IDm, raw + 3, 8);
       memcpy(PMm, raw + 11, 8);
       if ( len == 20)
         memcpy(SysCode, raw + 19, 2);
       break;
-      case PN532::Type_Mifare:
+      case Type_Mifare:
     default: // Mifare 106k TypeA
       IDLength = raw[4];
       memcpy(UID, raw + 5, IDLength);
@@ -105,7 +125,7 @@ struct ISO14443Card {
   }
 
   void init() {
-    type = PN532::Type_GenericPassiveTypeA;
+    type = 0xff;
     memset(rawIDData, 0, 8);
   }
 

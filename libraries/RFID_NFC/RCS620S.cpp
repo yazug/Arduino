@@ -15,6 +15,7 @@
 #include <HardwareSerial.h>
 #endif
 
+#include <HardwareSerial.h>
 #include <SoftwareSerial.h>
 
 #include "RCS620S.h"

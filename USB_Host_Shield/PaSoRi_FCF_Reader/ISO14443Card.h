@@ -9,11 +9,9 @@
 #define ISO14443Card_H_
 
 //#include "PN532_I2C.h"
-static const byte BaudrateType_106kbitTypeA = 0x00;
-static const byte BaudrateType_212kbitFeliCa = 0x01;
-static const byte Type_GenericPassiveTypeA = 0x00;
-static const byte Type_GenericPassive212kbFeliCa = 0x01;
-static const byte Type_GenericPassive424kbFeliCa = 0x02;
+static const byte Type_GenericPassive106kb = 0x00;
+static const byte Type_GenericPassive212kb = 0x01;
+static const byte Type_GenericPassive424kb = 0x02;
 static const byte Type_PassiveTypeB = 0x03;
 static const byte Type_Mifare = 0x10;
 static const byte Type_FeliCa212kb = 0x11;
