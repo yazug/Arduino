@@ -140,6 +140,62 @@ byte PaSoRi::poll(unsigned short syscode, byte rfu, byte timeslot) {
 	return rcode;
 }
 
+
+byte PaSoRi::listPassiveTarget(byte brtype, byte * payload, byte length) {
+	//http://hiro99ma.blogspot.jp/2011/05/rc-s620smifare.html
+	byte buf[64];
+	int hdr = mode == PASORI_S320 ? 2 : 4;
+	if (mode == PASORI_S320) {
+		buf[0] = PASORI2_CMD_SEND_PACKET;
+		buf[1] = 0x06;
+	} else {
+		buf[0] = PASORI3_CMD_SEND_PACKET;
+		buf[1] = PASORI3_CMD_LIST_PASSIVE;
+		buf[2] = 1;
+		buf[3] = brtype;
+	}
+	memcpy(buf+hdr, payload, length);
+
+	byte rcode = send_packet(hdr + length, buf);
+	Serial.print("hdr = ");
+	Serial.println(hdr, HEX);
+	Serial.print("send packet rcode = ");
+	Serial.println(rcode, HEX);
+	if (rcode == 0) {
+		hdr = mode == PASORI_S320 ? 2 : 5;
+		rcode = recv(sizeof(buf), buf);
+		for(int i = 0; i < 16; i++) {
+			Serial.print(buf[i], HEX);
+			Serial.print(' ');
+		}
+		Serial.println();
+		if (rcode == 0) {
+			byte size = buf[3];
+			if (mode == PASORI_S320 && size < 16)
+				return 0xff;
+			if (mode == PASORI_S330 && size == 1)
+				return 0xff;
+			if (mode == PASORI_S330 && buf[5] != PASORI3_ANS_SEND_PACKET)
+				return 0xfe;
+
+			const int pre = 5;
+			if (buf[pre+1] != PASORI3_CMD_LIST_PASSIVE+1)
+				return 0xfd;
+			switch(brtype) {
+				case 0x00:
+					memcpy(idm, buf+pre+6, buf[pre+6]+1);
+					break;
+				case 0x01:
+					memcpy(idm, buf + hdr + 6, 8);
+					memcpy(pmm, buf + hdr + 14, 8);
+					break;
+			}
+		}
+	}
+	return rcode;
+}
+
+
 int PaSoRi::read_without_encryption02(int servicecode, byte addr, byte b[16]) {
 	byte buf[64];
 	int i, hdr;

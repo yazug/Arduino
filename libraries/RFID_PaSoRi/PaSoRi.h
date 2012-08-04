@@ -10,7 +10,7 @@
 #include <max3421e.h>
 #include <Usb_HSv10.h>
 
-//#define DEBUG
+#define DEBUG
 
 #define PASORI_VID_HI 0x05
 #define PASORI_VID_LO 0x4c
@@ -64,6 +64,7 @@ public:
 
 	byte poll(unsigned short syscode = POLLING_ANY, byte rfu = 0,
 			byte timeslot = 0);
+	byte listPassiveTarget(byte brtype, byte * data, byte len);
 	const byte* getIDm() {
 		return idm;
 	}
@@ -77,6 +78,60 @@ public:
 	byte send_packet(int len, const byte *data);
 	byte send(int len, byte *buf);
 	byte recv(int len, byte *buf);
+
+	//
+	byte sendCommunicateThruEx(byte data[], byte length) {
+		byte buf[64];
+		int hdr = mode == PASORI_S320 ? 2 : 4;
+		if (mode == PASORI_S320) {
+			hdr = 2;
+			buf[0] = PASORI2_CMD_SEND_PACKET;
+			buf[1] = 16; // size
+		} else {
+			hdr = 3;
+			buf[0] = PASORI3_CMD_SEND_PACKET;
+			buf[1] = PASORI3_CMD_SEND_PACKET2;
+			buf[2] = 16; // size
+		}
+		const byte RCS956_CMD_COMMUNICATE_THRU_EX = 0xa0;
+		buf[hdr + 0] = RCS956_CMD_COMMUNICATE_THRU_EX;
+		// Timeout
+		buf[hdr + 1] = lowByte(0x07d0);
+		buf[hdr + 2] = highByte(0x07d0);
+		//
+		memcpy(buf+hdr + 3, data, length);
+
+		byte rcode = send_packet(hdr + 3 + length, data);
+		if (rcode == 0) {
+			hdr = mode == PASORI_S320 ? 2 : 5;
+			rcode = recv(sizeof(buf), buf);
+#ifdef DEBUG
+			Serial.println("sendCommunicateThruEx resp");
+			for(int i = 0; i < rcode; i++) {
+				Serial.print(buf[i]>>4, HEX);
+				Serial.print(buf[i]&0x0f, HEX);
+				Serial.print(' ');
+			}
+			Serial.println();
+#endif
+			if (rcode == 0) {
+				byte size = buf[3];
+				if (mode == PASORI_S320 && size < 16)
+					return 0xff;
+				if (mode == PASORI_S330 && size == 1)
+					return 0xff;
+				if (mode == PASORI_S330 && buf[5] != PASORI3_ANS_SEND_PACKET)
+					return 0xfe;
+				if (buf[hdr + 5] != RCS956_CMD_COMMUNICATE_THRU_EX)
+					return 0xfd;
+				memcpy(data, buf, rcode);
+				//memcpy(idm, buf + hdr + 6, 8);
+				//memcpy(pmm, buf + hdr + 14, 8);
+			}
+		}
+		return rcode;
+	}
+
 };
 
 #endif
