@@ -14,7 +14,8 @@
 //#define FELICADEBUG
 
 PN532::PN532(byte addr, byte irq, byte rst) :
-		i2c_addr(addr), pin_irq(irq), pin_rst(rst), lastStatus(0), chksum(0) {
+		i2c_addr(addr), pin_irq(irq), pin_rst(rst), lastStatus(0), chksum(0),
+		IDLength(0) {
 	pinMode(pin_irq, INPUT);
 	if (pin_rst != 0xff)
 		pinMode(pin_rst, OUTPUT);
@@ -570,21 +571,21 @@ byte PN532::felica_Polling(byte * resp, const word syscode) {
 	resp[2] = syscode >> 8 & 0xff;
 	resp[3] = 0x01; // request code: request sys code
 	resp[4] = 0; // time slot #
-	byte cnt = communicateThru(resp, 5);
+	byte result = InCommunicateThru(resp, 5);
+	result = getCommunicateThruResponse(resp);
 	if (resp[0] == FELICA_CMD_POLLING + 1 ) {
-		memcpy(resp, resp+1, cnt-9);
+		memcpy(resp, resp+1, result-9);
 		IDLength = 8;
-		memcpy(IDData, resp, cnt-9);
-		return cnt;
+		memcpy(IDData, resp, result-9);
+		return result;
 	}
 	IDLength = 0;
 	return 0;
 }
 
-byte PN532::communicateThru(byte * data, const byte len) {
-	InCommunicateThru(data, len);
+byte PN532::getCommunicateThruResponse(byte * data) {
+//	InCommunicateThru(data, len);
 	/* Read the response packet */
-
 	int count;
 	if (!(count = getCommandResponse(COMMAND_InCommunicateThru, packet))) {
 		return 0;
@@ -614,7 +615,8 @@ byte PN532::felica_RequestService(byte * resp, const word servcodes[],
 		resp[10 + 2 * i] = servcodes[i] & 0xff;
 		resp[11 + 2 * i] = servcodes[i] >> 8 & 0xff;
 	}
-	byte count = communicateThru(resp, 10 + 2 * servnum);
+	byte count = InCommunicateThru(resp, 10 + 2 * servnum);
+	count = getCommunicateThruResponse(resp);
 	if (resp[0] == FELICA_CMD_REQUESTSERVICE + 1 && count >= 10) {
 		byte svnum = resp[9];
 		memcpy(resp, resp + 10, svnum * 2);
@@ -635,7 +637,8 @@ word PN532::felica_RequestService(const word servcode) {
 byte PN532::felica_RequestSystemCode(byte * resp) {
 	resp[0] = FELICA_CMD_REQUESTSYSTEMCODE;
 	memcpy(resp + 1, IDData, 8);
-	if (communicateThru(resp, 9) == 0)
+	InCommunicateThru(resp, 9);
+	if (getCommunicateThruResponse(resp) == 0)
 		return 0;
 	byte n = resp[9];
 	memcpy(resp, resp + 10, n * 2);
@@ -659,7 +662,8 @@ byte PN532::felica_ReadWithoutEncryption(byte * resp,
 		resp[pos++] = blklist[i] & 0xff;
 	}
 	// pos has been incremented after the last substitution
-	byte count = communicateThru(resp, pos);
+	byte count = InCommunicateThru(resp, pos);
+	count = getCommunicateThruResponse(resp);
 	if (resp[9] == 0) {
 		byte blocks = resp[11];
 		memcpy(resp, resp + 12, blocks * 16);

@@ -163,7 +163,7 @@ public:
 			const byte initlen, const long & wmillis = 100);
 	byte InAutoPoll(const byte pollnr, const byte per, const byte * types,
 			const byte typeslen);
-	inline byte autoPoll_response(byte * resp, const long & waitmillis = 1000) {
+	inline byte getAutoPollResponse(byte * resp, const long & waitmillis = 1000) {
 		if ( getCommandResponse(PN532::COMMAND_InAutoPoll, resp, waitmillis) )
 			return resp[0];
 		return 0;
@@ -184,7 +184,7 @@ public:
 	byte mifare_ReadDataBlock(uint8_t blockNumber, uint8_t * data);
 
 	byte InCommunicateThru(const byte * data, const byte len);
-	byte communicateThru(byte * data, const byte len);
+	byte getCommunicateThruResponse(byte * data);
 
 	//	byte felica_DataExchange(const byte cmd, const byte * data, const byte len);
 	//	byte felica_getDataExchangeResponse(const byte fcmd, byte * resp);

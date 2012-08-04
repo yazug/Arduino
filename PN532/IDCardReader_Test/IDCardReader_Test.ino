@@ -4,31 +4,8 @@
 
 #include <Monitor.h>
 Monitor mon(Serial);
-/*
-template<class T>
-inline Stream & operator<<(Stream & s, T arg) {
-  s.print(arg);
-  return s;
-}
-*/
+
 const char endl = '\n';
-/*
-static void printHexString(const byte * a, byte len, byte base = HEX) {
-  for (int i = 0; i < len; i++) {
-    if ( base != 255 ) {
-      Serial.print(a[i] >> 4 & 0x0f, base);
-      Serial.print(a[i] & 0x0f, base);
-      Serial.print(" ");
-    } 
-    else {
-      if ( isprint(a[i]) )
-      Serial.print((char)a[i]);
-      else
-      Serial.print(' ');
-    }
-  }
-}
-*/
 #define IRQ   (2)
 #define RESET (0xff)  // Not connected by default on the NFC Shield
 PN532 nfc(PN532::I2C_ADDRESS, IRQ, RESET);
@@ -66,7 +43,8 @@ void loop() {
 
   if ( millis() > prev + 50 ) {
     prev = millis();
-    if ( nfc.InAutoPoll(2,2,pollingTypes+1,pollingTypes[0]) != 0 && nfc.autoPoll_response(tmp) != 0 ) {
+    if ( nfc.InAutoPoll(2,2,pollingTypes+1,pollingTypes[0]) != 0 
+        && nfc.getAutoPollResponse(tmp) != 0 ) {
       Serial << endl << "Num of tags = " << (int)tmp[0] << endl;
       mon.printArray(tmp, 16);
       if ( tmp[0] == 1 ) {
