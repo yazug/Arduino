@@ -56,7 +56,7 @@ RCS620S::RCS620S(Stream & ser) :
 	this->timeout = RCS620S_DEFAULT_TIMEOUT;
 }
 
-int RCS620S::initDevice(void) {
+int RCS620S::init(void) {
 	int ret;
 	uint8_t response[RCS620S_MAX_RW_RESPONSE_LEN];
 	uint16_t responseLen;
@@ -90,30 +90,44 @@ int RCS620S::initDevice(void) {
 	return 1;
 }
 
-int RCS620S::polling(uint16_t systemCode) {
+int RCS620S::polling(const byte brty, uint16_t systemCode) {
 	int ret;
 	uint8_t buf[9];
 	uint8_t response[RCS620S_MAX_RW_RESPONSE_LEN];
 	uint16_t responseLen;
-
+	uint16_t cmdlen;
 	/* InListPassiveTarget */
 	memcpy(buf, "\xd4\x4a\x01\x01\x00\xff\xff\x00\x00", 9);
-	buf[5] = (uint8_t) ((systemCode >> 8) & 0xff);
-	buf[6] = (uint8_t) ((systemCode >> 0) & 0xff);
-
-	ret = rwCommand(buf, 9, response, &responseLen);
-	if (!ret || (responseLen != 22)
-			|| (memcmp(response, "\xd5\x4b\x01\x01\x12\x01", 6) != 0)) {
+	buf[3] = brty;
+	switch (brty) {
+	case 0x00:
+		cmdlen = 4;
+		break;
+	case 0x01:
+		buf[5] = lowByte(systemCode);
+		buf[6] = highByte(systemCode);
+		cmdlen = 9;
+		break;
+	}
+	ret = rwCommand(buf, cmdlen, response, &responseLen);
+	if (!ret //|| (responseLen != 22)
+			|| ( memcmp(response, "\xd5\x4b\x01", 3) != 0) ) {
 		return 0;
 	}
 
-	memcpy(this->idm, response + 6, 8);
-	memcpy(this->pmm, response + 14, 8);
-
+	switch(brty) {
+	case 0x00:
+		memcpy(idm, response+6, response[6]);
+		break;
+	case 0x01:
+		memcpy(this->idm, response + 6, 8);
+		memcpy(this->pmm, response + 14, 8);
+		break;
+	}
 	return 1;
 }
 
-int RCS620S::cardCommand(const uint8_t* command, uint8_t commandLen,
+int RCS620S::CommunicateThruEx(const uint8_t* command, uint8_t commandLen,
 		uint8_t response[RCS620S_MAX_CARD_RESPONSE_LEN], uint8_t* responseLen) {
 	int ret;
 	uint16_t commandTimeout;
@@ -127,8 +141,8 @@ int RCS620S::cardCommand(const uint8_t* command, uint8_t commandLen,
 	}
 
 	/* CommunicateThruEX */
-	buf[0] = 0xd4;
-	buf[1] = 0xa0;
+	buf[0] = RCS956_COMMAND;
+	buf[1] = RCS956_COMMAND_CommunicateThruEx;
 	buf[2] = (uint8_t) ((commandTimeout >> 0) & 0xff);
 	buf[3] = (uint8_t) ((commandTimeout >> 8) & 0xff);
 	buf[4] = (uint8_t) (commandLen + 1);
@@ -143,6 +157,52 @@ int RCS620S::cardCommand(const uint8_t* command, uint8_t commandLen,
 	*responseLen = (uint8_t) (buf[3] - 1);
 	memcpy(response, buf + 4, *responseLen);
 
+	return 1;
+}
+
+int RCS620S::requestService(uint16_t serviceCode) {
+	int ret;
+	uint8_t buf[RCS620S_MAX_CARD_RESPONSE_LEN];
+	uint8_t responseLen = 0;
+
+	buf[0] = FELICA_CMD_REQUESTSERVICE;
+	memcpy(buf + 1, idm, 8);
+	buf[9] = 0x01;
+	buf[10] = lowByte(serviceCode);
+	buf[11] = highByte(serviceCode);
+
+	ret = CommunicateThruEx(buf, 12, buf, &responseLen);
+
+	if (!ret || (responseLen != 12) || (buf[0] != 0x03)
+			|| (memcmp(buf + 1, idm, 8) != 0)
+			|| ((buf[10] == 0xff) && (buf[11] == 0xff))) {
+		return 0;
+	}
+
+	return 1;
+}
+
+int RCS620S::readWithoutEncryption(uint16_t serviceCode, word blknum,
+		byte* responce) {
+	int ret;
+	uint8_t buf[32];
+	uint8_t responseLen = 0;
+
+	buf[0] = FELICA_CMD_READWITHOUTENCRYPTION;
+	memcpy(buf + 1, idm, 8);
+	buf[9] = 0x01;      // サービス数
+	buf[10] = lowByte(serviceCode);
+	buf[11] = highByte(serviceCode);
+	buf[12] = 0x01;     // ブロック数
+	buf[13] = 0x80 | highByte(blknum);
+	buf[14] = lowByte(blknum);
+
+	ret = CommunicateThruEx(buf, 15, buf, &responseLen);
+	if (!ret || (responseLen != 28) || (buf[0] != 0x07)
+			|| (memcmp(buf + 1, idm, 8) != 0)) {
+		return 0;
+	}
+	memcpy(responce, buf + 12, 16);
 	return 1;
 }
 
@@ -176,7 +236,7 @@ int RCS620S::push(const uint8_t* data, uint8_t dataLen) {
 	buf[9] = dataLen;
 	memcpy(buf + 10, data, dataLen);
 
-	ret = cardCommand(buf, 10 + dataLen, buf, &responseLen);
+	ret = CommunicateThruEx(buf, 10 + dataLen, buf, &responseLen);
 	if (!ret || (responseLen != 10) || (buf[0] != 0xb1)
 			|| (memcmp(buf + 1, this->idm, 8) != 0) || (buf[9] != dataLen)) {
 		return 0;
@@ -186,7 +246,7 @@ int RCS620S::push(const uint8_t* data, uint8_t dataLen) {
 	memcpy(buf + 1, this->idm, 8);
 	buf[9] = 0x00;
 
-	ret = cardCommand(buf, 10, buf, &responseLen);
+	ret = CommunicateThruEx(buf, 10, buf, &responseLen);
 	if (!ret || (responseLen != 10) || (buf[0] != 0xa5)
 			|| (memcmp(buf + 1, this->idm, 8) != 0) || (buf[9] != 0x00)) {
 		return 0;
@@ -317,7 +377,6 @@ int RCS620S::readSerial(uint8_t* data, uint16_t len) {
 			nread++;
 		}
 	}
-
 	return nread;
 }
 

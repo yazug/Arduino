@@ -36,18 +36,18 @@ public:
     RCS620S();
     RCS620S(Stream & ser);
 
-    int initDevice(void);
-    int polling(uint16_t systemCode = 0xffff);
-    int cardCommand(
-        const uint8_t* command,
+    inline void begin() { init(); }
+    int init(void);
+    int polling(const byte brtype = 0x01, uint16_t systemCode = 0xffff);
+    int CommunicateThruEx(const uint8_t* command,
         uint8_t commandLen,
         uint8_t response[RCS620S_MAX_CARD_RESPONSE_LEN],
         uint8_t* responseLen);
+    int requestService(uint16_t);
+    int readWithoutEncryption(uint16_t serviceCode, word blknum, byte* responce);
     int rfOff(void);
 
-    int push(
-        const uint8_t* data,
-        uint8_t dataLen);
+    int push(const uint8_t* data, uint8_t dataLen);
 
 private:
     int rwCommand(
@@ -70,15 +70,32 @@ private:
 
     int checkTimeout(unsigned long t0);
 
-public:
     Stream & port;
     const enum {
     	HARDWARESERIAL,
     	SOFTWARESERIAL
     } portType;
+    int stat;
+public:
     unsigned long timeout;
     uint8_t idm[8];
     uint8_t pmm[8];
+
+    static const int RCS956_COMMAND = 0xD4;
+    static const int RCS956_COMMAND_CommunicateThruEx = 0xA0;
+    static const int RCS956_COMMAND_InListPassiveTarget = 0x4A;
+    static const int RCS956_COMMAND_Reset = 0x18;
+    static const int RCS956_COMMAND_RFConfiguration = 0x32;
+    static const int RCS956_COMMAND_PowerDown = 0x16;
+    static const int RCS956_COMMAND_GetFirmwareVersion = 0x02;
+
+	static const byte FELICA_CMD_REQUESTSERVICE = 0x02;
+//	static const byte FELICA_CMD_ERQUESTRESPONSE = 0x04;
+	static const byte FELICA_CMD_READWITHOUTENCRYPTION = 0x06;
+//	static const byte FELICA_CMD_WRITEWITHOUTENCRYPTION = 0x08;
+//	static const byte FELICA_CMD_REQUESTSYSTEMCODE = 0x0c;
+
+
 };
 
 #endif /* !RCS620S_H_ */

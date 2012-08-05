@@ -31,33 +31,55 @@ void setup() {
 void loop()
 {
   byte rcode, i;
+  byte type;
   pasori.task(); // call this at every loop
 
-  rcode = pasori.poll(syscode);
-//  rcode = pasori.listPassiveTarget(0, (byte*)"\x00\xFE\x00\x00\x00", 0);
-//  rcode = pasori.listPassiveTarget(1, (byte*)"\x00\xFE\x00\x00\x00", 5);
-Serial.print("rcode = ");
-Serial.println(rcode, HEX);
+  //  rcode = pasori.poll(syscode);
+  type = TypeA;
+  rcode = pasori.listPassiveTarget(type, (byte*)"", 0);
+  //  rcode = pasori.listPassiveTarget(TypeF, (byte*)"\x00\xFE\x00\x00\x00", 5);
   if (rcode) {
     delay(500);
   } 
   else {
     // Polling successful
-    Serial << "FeliCa detected. IDm = ";
-    for (i = 0; i < 8; i++) {
-      Serial.print(pasori.getIDm()[i]>>4, HEX);
-      Serial.print(pasori.getIDm()[i]&0x0f, HEX);
-      Serial.print(" ");
+    if ( type == TypeA ) {
+      Serial << "Mifare " << "detected. UID = ";
+      for (i = 1; i < pasori.idm[0]; i++) {
+        Serial.print(pasori.idm[i]>>4, HEX);
+        Serial.print(pasori.idm[i]&0x0f, HEX);
+        Serial.print(" ");
+      }
+      Serial << "<< MagTape >>" << endl;
+      readMifare();
+      Serial << endl;
+      
+    } 
+    else if ( type == TypeF ) {
+      Serial << "FeliCa " << "detected. IDm = ";
+      for (i = 0; i < 8; i++) {
+        Serial.print(pasori.idm[i]>>4, HEX);
+        Serial.print(pasori.pmm[i]&0x0f, HEX);
+        Serial.print(" ");
+      }
+      Serial << "<< FCF >>" << endl;
+      readFCF();
+      Serial << endl;
     }
-    Serial << endl;
-
-    Serial << "<< FCF >>" << endl;
-    readFCF();
 
     delay(3000);
   }
 }
 
+int readMifare() {
+  #define MIFARE_CMD_AUTH_A                   (0x60)
+  byte tmp[32];
+  tmp[0] = 0x60;
+  tmp[1] = 2;
+  memcpy(tmp+2, "\xFF\xFF\xFF\xFF\xFF\xFF",6);
+  memcpy(tmp+8, pasori.idm+1,7);
+  int rcode = pasori.sendInDataExchange(tmp,15);
+}
 
 int readFCF()
 {
@@ -96,7 +118,8 @@ int readFCF()
   for(int p = 0; buf[16+p] != 0; p++) {
     if ( buf[16+p] < 0x7e ) {
       Serial << (char) buf[16+p] << " ";
-    } else {
+    } 
+    else {
       Serial << kana[(buf[16+p] - (byte)0xa0)] << " ";
     }
   }
@@ -105,9 +128,11 @@ int readFCF()
   tmp[8] = 0;
   long goodthru = atol((char*)tmp);
   Serial << "Goodthru: " << goodthru/10000 << "/" 
-  << goodthru/100%100 << "/" << goodthru%100 << endl;
+    << goodthru/100%100 << "/" << goodthru%100 << endl;
   Serial << endl;
   return ret;
 }
+
+
 
 

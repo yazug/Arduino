@@ -33,11 +33,11 @@ void loop()
   byte rcode, i;
   pasori.task(); // call this at every loop
 
-  rcode = pasori.poll(syscode);
+//  rcode = pasori.poll(syscode);
 //  rcode = pasori.listPassiveTarget(0, (byte*)"\x00\xFE\x00\x00\x00", 0);
-//  rcode = pasori.listPassiveTarget(1, (byte*)"\x00\xFE\x00\x00\x00", 5);
-Serial.print("rcode = ");
-Serial.println(rcode, HEX);
+  rcode = pasori.listPassiveTarget(1, (byte*)"\x00\xFE\x00\x00\x00", 5);
+//Serial.print("rcode = ");
+//Serial.println(rcode, HEX);
   if (rcode) {
     delay(500);
   } 
@@ -45,8 +45,8 @@ Serial.println(rcode, HEX);
     // Polling successful
     Serial << "FeliCa detected. IDm = ";
     for (i = 0; i < 8; i++) {
-      Serial.print(pasori.getIDm()[i]>>4, HEX);
-      Serial.print(pasori.getIDm()[i]&0x0f, HEX);
+      Serial.print(pasori.idm[i]>>4, HEX);
+      Serial.print(pasori.idm[i]&0x0f, HEX);
       Serial.print(" ");
     }
     Serial << endl;

@@ -10,12 +10,22 @@
 
 //#include "PN532_I2C.h"
 static const byte TypeA = 0x00;
+static const byte TypeF = 0x01;
 static const byte TypeF_212kb = 0x01;
 static const byte TypeF_424kb = 0x02;
 static const byte TypeB = 0x03;
+static const byte TypeJewel = 0x03;
 static const byte Mifare = 0x10;
 static const byte FeliCa212kb = 0x11;
 static const byte FeliCa424kb = 0x12;
+
+static const word SystemCode_EDY = 0x00FE;
+static const word SystemCode_FCF = 0x00FE;
+static const word SystemCode_SUICA = 0x0003;
+static const word ServiceCode_SUICA = 0x090F;
+static const word ServiceCode_EDY = 0x170F;
+static const word ServiceCode_FCF = 0x1a8b;
+
 
 
 char kana[][4] = {

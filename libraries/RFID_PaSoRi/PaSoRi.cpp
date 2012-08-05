@@ -157,18 +157,22 @@ byte PaSoRi::listPassiveTarget(byte brtype, byte * payload, byte length) {
 	memcpy(buf+hdr, payload, length);
 
 	byte rcode = send_packet(hdr + length, buf);
+#ifdef DEBUG
 	Serial.print("hdr = ");
 	Serial.println(hdr, HEX);
 	Serial.print("send packet rcode = ");
 	Serial.println(rcode, HEX);
+#endif
 	if (rcode == 0) {
 		hdr = mode == PASORI_S320 ? 2 : 5;
 		rcode = recv(sizeof(buf), buf);
+#ifdef DEBUG
 		for(int i = 0; i < 16; i++) {
 			Serial.print(buf[i], HEX);
 			Serial.print(' ');
 		}
 		Serial.println();
+#endif
 		if (rcode == 0) {
 			byte size = buf[3];
 			if (mode == PASORI_S320 && size < 16)

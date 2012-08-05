@@ -10,7 +10,7 @@
 #include <max3421e.h>
 #include <Usb_HSv10.h>
 
-#define DEBUG
+//#define DEBUG
 
 #define PASORI_VID_HI 0x05
 #define PASORI_VID_LO 0x4c
@@ -53,10 +53,11 @@ class PaSoRi {
 	} mode;
 	EP_RECORD ep_record[5]; //endpoint record structure for PaSoRi
 
+	byte init();
+
+public:
 	byte idm[8];
 	byte pmm[8];
-
-	byte init();
 
 public:
 	byte begin();
@@ -65,12 +66,14 @@ public:
 	byte poll(unsigned short syscode = POLLING_ANY, byte rfu = 0,
 			byte timeslot = 0);
 	byte listPassiveTarget(byte brtype, byte * data, byte len);
+/*
 	const byte* getIDm() {
 		return idm;
 	}
 	const byte* getPMm() {
 		return pmm;
 	}
+	*/
 	int read_without_encryption02(int servicecode, byte addr, byte b[16]);
 	byte mobile_felica_push_url(int len, const char *url);
 
@@ -80,33 +83,37 @@ public:
 	byte recv(int len, byte *buf);
 
 	//
-	byte sendCommunicateThruEx(byte data[], byte length) {
-		byte buf[64];
-		int hdr = mode == PASORI_S320 ? 2 : 4;
+	byte sendInDataExchange(byte data[], byte length) {
+		byte buf[32];
+		int hdr;// = mode == PASORI_S320 ? 2 : 4;
 		if (mode == PASORI_S320) {
 			hdr = 2;
 			buf[0] = PASORI2_CMD_SEND_PACKET;
 			buf[1] = 16; // size
 		} else {
-			hdr = 3;
 			buf[0] = PASORI3_CMD_SEND_PACKET;
-			buf[1] = PASORI3_CMD_SEND_PACKET2;
-			buf[2] = 16; // size
+			buf[1] = 0xa0;
+			buf[2] = 0xd0;
+			buf[3] = 0x07;
+			hdr = 4;
 		}
-		const byte RCS956_CMD_COMMUNICATE_THRU_EX = 0xa0;
-		buf[hdr + 0] = RCS956_CMD_COMMUNICATE_THRU_EX;
-		// Timeout
-		buf[hdr + 1] = lowByte(0x07d0);
-		buf[hdr + 2] = highByte(0x07d0);
 		//
-		memcpy(buf+hdr + 3, data, length);
+		memcpy(&buf[4], data, length);
 
-		byte rcode = send_packet(hdr + 3 + length, data);
+		Serial.println("sendInDataExchange send");
+		for(int i = 0; i < hdr+length; i++) {
+			Serial.print(buf[i]>>4, HEX);
+			Serial.print(buf[i]&0x0f, HEX);
+			Serial.print(' ');
+		}
+		Serial.println();
+
+		byte rcode = send_packet(hdr + length, buf);
 		if (rcode == 0) {
 			hdr = mode == PASORI_S320 ? 2 : 5;
 			rcode = recv(sizeof(buf), buf);
 #ifdef DEBUG
-			Serial.println("sendCommunicateThruEx resp");
+			Serial.println("sendInDataExchange resp");
 			for(int i = 0; i < rcode; i++) {
 				Serial.print(buf[i]>>4, HEX);
 				Serial.print(buf[i]&0x0f, HEX);
@@ -122,7 +129,7 @@ public:
 					return 0xff;
 				if (mode == PASORI_S330 && buf[5] != PASORI3_ANS_SEND_PACKET)
 					return 0xfe;
-				if (buf[hdr + 5] != RCS956_CMD_COMMUNICATE_THRU_EX)
+				if (buf[hdr + 5] != PASORI3_CMD_SEND_PACKET2)
 					return 0xfd;
 				memcpy(data, buf, rcode);
 				//memcpy(idm, buf + hdr + 6, 8);
