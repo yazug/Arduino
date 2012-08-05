@@ -15,6 +15,9 @@
 #include <Stream.h>
 #include <HardwareSerial.h>
 
+const char endl = '\n';
+const char cr = '\r';
+
 class Monitor : public Stream {
 private:
 	void printNumber(byte i, byte b);
@@ -30,8 +33,6 @@ protected:
 	Stream & port;
 
 public:
-	static const char endl = '\n';
-	static const char cr = '\r';
 	static unsigned long asBCD(unsigned long lval);
 	static int asHexadecimal(char * str, int offset);
 	static int asBytes(byte[], int limit = 0);
@@ -74,36 +75,6 @@ public:
 #endif
 	using Print::write;
 	using Print::print;
-#if ARDUINO >= 100
-	size_t print(const char * s, byte base) {
-		char * p = (char*) s;
-		while (*p != 0) {
-			printNumber(*p, base);
-			print(' ');
-			p++;
-		}
-		return p -s;
-	}
-
-	size_t print(const byte * s, int len, byte base) {
-		char * p = (char*) s;
-		for (int i = 0; i < len; i++, p++) {
-			printNumber(*p, base);
-			//print(' ');
-		}
-		return len;
-	}
-
-#else
-	void print(const char * s, byte base) {
-		char * p = (char*) s;
-		while (*p != 0) {
-			printNumber(*p, base);
-			print(' ');
-			p++;
-		}
-	}
-#endif
 
 	// Over-riding Stream's virtual functions
 	virtual int available() {

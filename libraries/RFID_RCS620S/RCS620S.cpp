@@ -292,35 +292,6 @@ int RCS620S::push(const uint8_t* data, uint8_t dataLen) {
 }
 
 
-// InDataExchange for Mifare
-byte RCS620S::InDataExchange(const byte micmd, const byte blkaddr,
-		const byte * data, const byte length) {
-	byte packet[64];
-	// Prepare a Mifare command //
-	packet[0] = 0x40; //COMMAND_InDataExchange; /* Data Exchange Header */
-	packet[1] = 1; /* target number */
-	packet[2] = micmd;
-	packet[3] = blkaddr;
-	memcpy(packet + 4, data, length);
-
-#ifdef DEBUG
-	Serial.print("Sending in InDataExchange: ");
-	Serial.print("<< ");
-	for(int i = 0; i < length+5; i++) {
-		Serial.print(packet[i]>>4, HEX);
-		Serial.print(packet[i]&0x0f, HEX);
-		Serial.print(' ');
-	}
-	Serial.println();
-#endif
-	byte ret = rwCommand(packet, 4 + length);
-	if ( ! ret ) {
-		return 0;
-	}
-	return 1;
-}
-
-
 /* ------------------------
  * private
  * ------------------------ */

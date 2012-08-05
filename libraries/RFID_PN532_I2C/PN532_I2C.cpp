@@ -14,16 +14,17 @@
 //#define FELICADEBUG
 
 PN532::PN532(byte addr, byte irq, byte rst) :
-		i2c_addr(addr), pin_irq(irq), pin_rst(rst), lastStatus(0), chksum(0),
-		IDLength(0) {
+		i2c_addr(addr), pin_irq(irq), pin_rst(rst), lastStatus(0), chksum(0) {
 	pinMode(pin_irq, INPUT);
 	if (pin_rst != 0xff)
 		pinMode(pin_rst, OUTPUT);
+	target.IDLength = 0;
 }
 
 void PN532::init() {
 	chksum = 0;
 	lastStatus = 0;
+	target.IDLength = 0;
 	// Reset the PN532
 	if (pin_irq != 0xff) {
 		digitalWrite(pin_irq, HIGH);
@@ -575,11 +576,11 @@ byte PN532::felica_Polling(byte * resp, const word syscode) {
 	result = getCommunicateThruResponse(resp);
 	if (resp[0] == FELICA_CMD_POLLING + 1 ) {
 		memcpy(resp, resp+1, result-9);
-		IDLength = 8;
-		memcpy(IDData, resp, result-9);
+		target.IDLength = 8;
+		memcpy(target.IDm, resp, result-9);
 		return result;
 	}
-	IDLength = 0;
+	target.IDLength = 0;
 	return 0;
 }
 
@@ -609,7 +610,7 @@ byte PN532::getCommunicateThruResponse(byte * data) {
 byte PN532::felica_RequestService(byte * resp, const word servcodes[],
 		const byte servnum) {
 	resp[0] = FELICA_CMD_REQUESTSERVICE;
-	memcpy(resp + 1, IDData, 8);
+	memcpy(resp + 1, target.IDm, 8);
 	resp[9] = servnum;
 	for (int i = 0; i < servnum; i++) {
 		resp[10 + 2 * i] = servcodes[i] & 0xff;
@@ -636,7 +637,7 @@ word PN532::felica_RequestService(const word servcode) {
 
 byte PN532::felica_RequestSystemCode(byte * resp) {
 	resp[0] = FELICA_CMD_REQUESTSYSTEMCODE;
-	memcpy(resp + 1, IDData, 8);
+	memcpy(resp + 1, target.IDm, 8);
 	InCommunicateThru(resp, 9);
 	if (getCommunicateThruResponse(resp) == 0)
 		return 0;
@@ -649,7 +650,7 @@ byte PN532::felica_RequestSystemCode(byte * resp) {
 byte PN532::felica_ReadWithoutEncryption(byte * resp,
 		const word servcode, const byte blknum, const word blklist[]) {
 	resp[0] = FELICA_CMD_READWITHOUTENCRYPTION;
-	memcpy(resp + 1, IDData, 8);
+	memcpy(resp + 1, target.IDm, 8);
 	resp[9] = 1;
 	resp[10] = servcode & 0xff;
 	resp[11] = servcode >> 8 & 0xff;

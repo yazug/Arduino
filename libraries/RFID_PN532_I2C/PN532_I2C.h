@@ -87,8 +87,13 @@ class PN532 {
 	byte packet[PACKBUFFSIZE];
 	byte lastStatus;
 	//
-	byte IDLength;
-	byte IDData[10];
+	union {
+		byte IDm[8];
+		struct {
+			byte IDLength;
+			byte UID[7];
+		};
+	} target;
 
 	inline void wirewrite(const byte & d) {
 		Wire.write(d);
@@ -143,10 +148,13 @@ public:
 	PN532(byte addr = I2C_ADDRESS, byte irq = 0xff, byte rst = 0xff);
 
 	void init();
-	inline void begin() { init(); }
+	inline void begin() {
+		init();
+	}
 
 	unsigned long getFirmwareVersion();
-	boolean SAMConfiguration(byte mode = 0x01, byte timeout = 0x14, byte use_irq = 0x01);
+	boolean SAMConfiguration(byte mode = 0x01, byte timeout = 0x14,
+			byte use_irq = 0x01);
 
 	static const byte BaudrateType_106kbitTypeA = 0x00;
 	static const byte BaudrateType_212kbitFeliCa = 0x01;
@@ -163,8 +171,10 @@ public:
 			const byte initlen, const long & wmillis = 100);
 	byte InAutoPoll(const byte pollnr, const byte per, const byte * types,
 			const byte typeslen);
-	inline byte getAutoPollResponse(byte * resp, const long & waitmillis = 1000) {
-		if ( getCommandResponse(PN532::COMMAND_InAutoPoll, resp, waitmillis) )
+
+	inline byte autoPoll(const byte polltypes[], byte * resp, const long & waitmillis = 1000) {
+		if ( InAutoPoll(1,2, polltypes+1, polltypes[0])
+			&& getCommandResponse(PN532::COMMAND_InAutoPoll, resp, waitmillis))
 			return resp[0];
 		return 0;
 	}
@@ -179,8 +189,8 @@ public:
 	byte listPassiveTarget(byte * data, const byte brty =
 			BaudrateType_106kbitTypeA, const word syscode = 0xffff);
 
-	byte mifare_AuthenticateBlock(const byte * uid, byte uidLen, word blockNumber,
-			const byte * keyData);
+	byte mifare_AuthenticateBlock(const byte * uid, byte uidLen,
+			word blockNumber, const byte * keyData);
 	byte mifare_ReadDataBlock(uint8_t blockNumber, uint8_t * data);
 
 	byte InCommunicateThru(const byte * data, const byte len);
@@ -189,12 +199,13 @@ public:
 	//	byte felica_DataExchange(const byte cmd, const byte * data, const byte len);
 	//	byte felica_getDataExchangeResponse(const byte fcmd, byte * resp);
 	byte felica_Polling(byte * resp, const word syscode = 0xffff);
-	byte felica_RequestService(byte * resp, const word servcodes[], const byte servnum);
+	byte felica_RequestService(byte * resp, const word servcodes[],
+			const byte servnum);
 	word felica_RequestService(const word servcode);
 	byte felica_RequestSystemCode(byte * resp);
 	// Block list accepts only two byte codes.
-	byte felica_ReadWithoutEncryption(byte * resp, const word servcode, const byte blknum, const word blklist[]);
-
+	byte felica_ReadWithoutEncryption(byte * resp, const word servcode,
+			const byte blknum, const word blklist[]);
 
 };
 
