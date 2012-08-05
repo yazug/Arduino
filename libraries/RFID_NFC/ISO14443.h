@@ -19,15 +19,14 @@ static const byte Mifare = 0x10;
 static const byte FeliCa212kb = 0x11;
 static const byte FeliCa424kb = 0x12;
 
-static const word SystemCode_EDY = 0x00FE;
-static const word SystemCode_FCF = 0x00FE;
-static const word SystemCode_SUICA = 0x0003;
-static const word ServiceCode_SUICA = 0x090F;
-static const word ServiceCode_EDY = 0x170F;
-static const word ServiceCode_FCF = 0x1a8b;
+static const word FELICA_SYSCODE_EDY = 0x00FE;
+static const word FELICA_SYSCODE_FCF = 0x00FE;
+static const word FELICA_SYSCODE_SUICA = 0x0003;
+static const word FELICA_SERVICE_SUICA = 0x090F;
+static const word FELICA_SERVICE_EDY = 0x170F;
+static const word FELICA_SERVICE_FCF = 0x1a8b;
 
-
-
+/*
 char kana[][4] = {
   "xx", "xx", "xx", "xx", "xx", "xx", "wo", "xa",
   "xi", "xu", "xe", "xo", "ya", "yu", "yo", "xtu",
@@ -38,7 +37,7 @@ char kana[][4] = {
   "MI", "MU", "ME", "MO", "YA", "YU", "YO", "RA",
   "RI", "RU", "RE", "RO", "WA", "NN", "\"", "o",
 };
-
+*/
 
 struct FCF {
     byte res0[2];

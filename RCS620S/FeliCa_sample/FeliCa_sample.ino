@@ -23,11 +23,12 @@ void setup() {
 
 void loop() {
   int ret, i;
+  byte tmp[64];
 
   // Polling
   digitalWrite(LED_PIN, HIGH);
   rcs620s.timeout = COMMAND_TIMEOUT;
-  ret = rcs620s.polling(1,0x00fe);
+  ret = rcs620s.listPassiveTarget(tmp, 1,FELICA_SYSCODE_FCF);
 
   if (!ret) {
     Serial.println("polling...");
@@ -41,12 +42,12 @@ void loop() {
     }
     Serial.println();
     //
-    if ( (ret = rcs620s.requestService(ServiceCode_FCF)) ) {
+    if ( (ret = rcs620s.requestService(FELICA_SERVICE_FCF)) ) {
       Serial.print("ret is ");
       Serial.println(ret);
       byte tmp[16];
       for(int b = 0; b < 4; b++) {
-        ret = rcs620s.readWithoutEncryption(ServiceCode_FCF, b, tmp);
+        ret = rcs620s.readWithoutEncryption(FELICA_SERVICE_FCF, b, tmp);
         Serial.print(b>>12&0x0f, HEX);
         Serial.print(b>>8&0x0f, HEX);
         Serial.print(b>>4&0x0f, HEX);

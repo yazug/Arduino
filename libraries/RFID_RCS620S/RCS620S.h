@@ -19,6 +19,7 @@
 
 #include <SoftwareSerial.h>
 
+#include "ISO14443.h"
 
 /* --------------------------------
  * Constants
@@ -38,23 +39,24 @@ public:
 
     inline void begin() { init(); }
     int init(void);
-    int polling(const byte brtype = 0x01, uint16_t systemCode = 0xffff);
-    int CommunicateThruEx(const uint8_t* command,
-        uint8_t commandLen,
-        uint8_t response[RCS620S_MAX_CARD_RESPONSE_LEN],
-        uint8_t* responseLen);
+//    int polling(const byte brtype = 0x01, uint16_t syscode = 0xffff);
+	byte listPassiveTarget(byte * data, const byte brty =
+			TypeA, const word syscode = 0xffff);
+
+    int CommunicateThruEx(uint8_t* command,
+        uint8_t commandLen);
     int requestService(uint16_t);
     int readWithoutEncryption(uint16_t serviceCode, word blknum, byte* responce);
     int rfOff(void);
 
     int push(const uint8_t* data, uint8_t dataLen);
 
+    byte InDataExchange(const byte micmd, const byte blkaddr, const byte * data, const byte length);
+
 private:
-    int rwCommand(
-        const uint8_t* command,
-        uint16_t commandLen,
-        uint8_t response[RCS620S_MAX_RW_RESPONSE_LEN],
-        uint16_t* responseLen);
+    word rwCommand(uint8_t* command, const word commandLen, const word maxresplen = RCS620S_MAX_RW_RESPONSE_LEN); //,
+//        uint8_t response[RCS620S_MAX_RW_RESPONSE_LEN],
+ //       uint16_t* responseLen);
     void cancel(void);
     uint8_t calcDCS(
         const uint8_t* data,
