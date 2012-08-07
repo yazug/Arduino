@@ -4,26 +4,6 @@
 
 #include "Monitor.h"
 
-/*
- char * Monitor::byteString(char * buf, const byte val[], const int len,
- const byte base) {
- char * p = buf;
- for (int i = 0; i < len; i++) {
- switch (base) {
- case HEX:
- p += sprintf(p, "%02X ", val[i]);
- break;
- case BIN:
- if (i > 0)
- p += sprintf(p, " ");
- for (int bit = 0; bit < 8; bit++)
- p += sprintf(p, "%d", val[i] >> bit & 1);
- break;
- }
- }
- return buf;
- }
- */
 
 unsigned long Monitor::asBCD(unsigned long lval) {
 	unsigned long tmp;
@@ -65,43 +45,6 @@ int Monitor::asHexadecimal(char * str, int limit) {
 		}
 	}
 	return count;
-}
-
-const Monitor & Monitor::printArray(const word array[], const int size, const byte base) {
-	int i;
-	for (i = 0; i < size; i++) {
-		if (i > 0)
-			print(' ');
-		print(array[i] >> 12 & 0x0f, base);
-		print(array[i] >> 8 & 0x0f, base);
-		print(array[i] >> 4 & 0x0f, base);
-		print(array[i] & 0x0f, base);
-	}
-	return *this;
-}
-
-const Monitor & Monitor::printArray(const byte array[], const int size, const byte base) {
-	int i;
-	for (i = 0; i < size; i++) {
-		if (i > 0)
-			print(' ');
-		print(array[i] >> 4, base);
-		print(array[i] & 0x0f, base);
-	}
-	return *this;
-}
-
-const Monitor & Monitor::printArray(const char array[], const int size) {
-	int i;
-	for (i = 0; i < size; i++) {
-		if (i > 0)
-			print(' ');
-		if ( isprint(array[i]) )
-			print(array[i]);
-		else
-			print(' ');
-	}
-	return *this;
 }
 
 int Monitor::read(byte rcv[], const int maxlen, const long limit) {
