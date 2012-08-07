@@ -222,21 +222,21 @@ boolean PN532::SAMConfiguration(byte mode, byte timeout, byte use_irq) {
 	return (packet[6] == COMMAND_SAMConfiguration + 1);
 }
 
-byte PN532::InListPassiveTarget(const byte maxtg, const byte brty, byte * data,
-		const byte initlen, const long & waitmillis) {
+byte PN532::InListPassiveTarget(const byte maxtg, const byte brty,
+		const byte length, byte * data, const long & waitmillis) {
 //	byte inidatalen = 0;
 	packet[0] = COMMAND_InListPassivTarget;
 	packet[1] = maxtg; // max 1 cards at once (we can set this to 2 later)
 	packet[2] = brty;
-	if (initlen > 0) {
-		memcpy(packet + 3, data, initlen);
+	if (length > 0) {
+		memcpy(packet + 3, data, length);
 	}
 #ifdef PN532DEBUG
 	Serial.print("Send in InListPassiveTarget: ");
-	printHexString(packet, initlen + 3);
+	printHexString(packet, length + 3);
 	Serial.println();
 #endif
-	sendcc(packet, 3 + initlen);
+	sendcc(packet, 3 + length);
 	if (!checkACKframe())
 		return 0;
 #ifdef PN532DEBUG
@@ -341,7 +341,7 @@ byte PN532::listPassiveTarget(byte * data, const byte brty, const word syscode) 
 	default:
 		break;
 	}
-	if (!InListPassiveTarget(1, brty, data, inidatalen, 50)) {
+	if (!InListPassiveTarget(1, brty, inidatalen, data, 50)) {
 #ifdef PN532DEBUG
 		Serial.println("InListPassiveTarget ACK failed. ");
 #endif
