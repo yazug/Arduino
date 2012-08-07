@@ -8,8 +8,6 @@
 #ifndef PN532_I2C_H_
 #define PN532_I2C_H_
 
-//#include <string.h>
-
 #if ARDUINO >= 100
 #include "Arduino.h"
 #else
@@ -158,12 +156,9 @@ public:
 
 	static const byte BaudrateType_106kbitTypeA = 0x00;
 	static const byte BaudrateType_212kbitFeliCa = 0x01;
-<<<<<<< HEAD:libraries/RFID_PN532_I2C/PN532_I2C.h
-
-=======
 	byte InListPassiveTarget(const byte maxtg, const byte brty,
 			const byte initlen = 0, byte * data = NULL, const long & wmillis = 100);
->>>>>>> PN532:libraries/RFID_NFC/PN532_I2C.h
+
 	static const byte Type_GenericPassiveTypeA = 0x00;
 	static const byte Type_GenericPassive212kbFeliCa = 0x01;
 	static const byte Type_GenericPassive424kbFeliCa = 0x02;

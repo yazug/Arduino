@@ -10,12 +10,8 @@
 
 #include <Arduino.h>
 #include <Stream.h>
-#include <HardwareSerial.h>
-
-#include <string.h>
 
 const char endl = '\n';
-const char cr = '\r';
 
 template<class T>
 inline Stream &operator <<(Stream &stream, T arg) {
@@ -23,70 +19,39 @@ inline Stream &operator <<(Stream &stream, T arg) {
 	return stream;
 }
 
-class Monitor: public Stream {
-	HardwareSerial & port;
-	byte curr_radix;
+class Monitor {
 	char * sbuf;
+
 public:
-	Monitor(HardwareSerial & hs, char * buf) : port(hs), curr_radix(HEX), sbuf(buf) {}
+	Monitor(char * buf) : sbuf(buf) { }
 
-	virtual size_t write(uint8_t b) {
-		return port.write(b);
-	}
-	using Print::write;
-	using Print::print;
-
-	// Over-riding Stream's virtual functions
-	virtual int available() {
-		return port.available();
-	} // may be overridden
-	virtual int read() {
-		return port.read();
-	}
-	virtual int peek() {
-		return port.peek();
-	}
-	virtual void flush() {
-		return port.flush();
-	}
-	//
-
-	Monitor & radix(byte b) {
-		sprintf(sbuf,"%02X", b);
-		port.print(sbuf);
-		return *this;
-	}
-	Monitor & radix(word w) {
-		sprintf(sbuf,"%04X", w);
-		port.print(sbuf);
-		return *this;
-	}
-	Monitor & radix(unsigned long l) {
-		sprintf(sbuf,"%08X", l);
-		port.print(sbuf);
-		return *this;
+	const char * printHex(const byte * a, const int length) {
+		char * p = sbuf;
+		for (int i = 0; i < length; i++) {
+			sprintf(p, "%02X ", a[i]);
+			p += 3;
+		}
+		return sbuf;
 	}
 
-	size_t Print::printNumber(unsigned long n, uint8_t base) {
-	  char buf[8 * sizeof(long) + 1]; // Assumes 8-bit chars plus zero byte.
-	  char *str = &buf[sizeof(buf) - 1];
-
-	  *str = '\0';
-
-	  // prevent crash if called with base == 1
-	  if (base < 2) base = 10;
-
-	  do {
-	    unsigned long m = n;
-	    n /= base;
-	    char c = m - base * n;
-	    *--str = c < 10 ? c + '0' : c + 'A' - 10;
-	  } while(n);
-
-	  return write(str);
+	const char * printHex(const word * a, const int length) {
+		char * p = sbuf;
+		for (int i = 0; i < length; i++) {
+			sprintf(p, "%04X ", a[i]);
+			p += 5;
+		}
+		return sbuf;
 	}
 
+	const char * printHex(const byte b) {
+		sprintf(sbuf, "%02X", b);
+		return sbuf;
+	}
+
+	const char * printHex(const word w) {
+		sprintf(sbuf, "%04X", w);
+		return sbuf;
+	}
 };
-
 
 #endif /* MONITOR_H_ */

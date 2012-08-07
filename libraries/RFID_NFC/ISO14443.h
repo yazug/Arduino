@@ -27,146 +27,142 @@ static const word FELICA_SERVICE_EDY = 0x170F;
 static const word FELICA_SERVICE_FCF = 0x1a8b;
 
 /*
-char kana[][4] = {
-  "xx", "xx", "xx", "xx", "xx", "xx", "wo", "xa",
-  "xi", "xu", "xe", "xo", "ya", "yu", "yo", "xtu",
-  "-", "A", "I", "U", "E", "O", "KA", "KI",
-  "KU", "KE", "KO", "SA", "SHI", "SU", "SE", "SO",
-  "aaa", "bbb", "ccc", "ddd", "eee", "NA", "NI", "NU",
-  "NE", "NO", "HA", "HI", "FU", "HE", "HO", "MA",
-  "MI", "MU", "ME", "MO", "YA", "YU", "YO", "RA",
-  "RI", "RU", "RE", "RO", "WA", "NN", "\"", "o",
-};
-*/
+ char kana[][4] = {
+ "xx", "xx", "xx", "xx", "xx", "xx", "wo", "xa",
+ "xi", "xu", "xe", "xo", "ya", "yu", "yo", "xtu",
+ "-", "A", "I", "U", "E", "O", "KA", "KI",
+ "KU", "KE", "KO", "SA", "SHI", "SU", "SE", "SO",
+ "aaa", "bbb", "ccc", "ddd", "eee", "NA", "NI", "NU",
+ "NE", "NO", "HA", "HI", "FU", "HE", "HO", "MA",
+ "MI", "MU", "ME", "MO", "YA", "YU", "YO", "RA",
+ "RI", "RU", "RE", "RO", "WA", "NN", "\"", "o",
+ };
+ */
 
 struct FCF {
-    byte res0[2];
-    char id[8];
-    byte res1[4];
-    char issue;
-    byte res2;
-    char kana[16];
-    byte res3[16];
-    char goodthru[8];
-    byte res4[8];
+	byte res0[2];
+	char id[8];
+	byte res1[4];
+	char issue;
+	byte res2;
+	char kana[16];
+	byte res3[16];
+	char goodthru[8];
+	byte res4[8];
 };
 
 struct IizukaMagTape {
-  char idtype[2];
-  char id[8];
-  char issue;
-  char res0[5];
-  word kanji[8];
-  char dayofbirth[7];
-  char gender;
-  char dayofissue[7];
-  char res1[1];
+	char idtype[2];
+	char id[8];
+	char issue;
+	char res0[5];
+	word kanji[8];
+	char dayofbirth[7];
+	char gender;
+	char dayofissue[7];
+	char res1[1];
 };
 
 struct ISO14443 {
-  static const byte data_size = 18;
-  //
-  byte type;
-  union {
-    struct {
-      byte IDLength;
-      union {
-      byte UID[7];
-      byte NUID[7];
-      };
-    };
-    struct {
-      byte IDm[8];
-      byte PMm[8];
-      byte SysCode[2];
-    };
-    byte rawIDData[data_size];
-  };
+	static const byte data_size = 18;
+	//
+	byte type;
+	byte IDLength;
+	union {
+		byte UID[7];
+		byte NUID[7];
+		struct {
+			byte IDm[8];
+			byte PMm[8];
+			byte SysCode[2];
+		};
+		byte id[data_size];
+	};
 
-  ISO14443() {
-    init();
-  }
+	ISO14443() {
+		init();
+	}
 
-  ISO14443(const byte * raw) {
-    set(raw);
-  }
-  
-  ISO14443(const byte & card) {
-    set(card);
-  }
+	ISO14443(const byte * raw) {
+		set(raw);
+	}
 
-  void set(const ISO14443 & card) {
-    type = card.type;
-    switch(type) {
-    case FeliCa212kb: // Felica
-      memcpy(rawIDData, card.rawIDData, 18);
-      break;
-    default: // Mifare
-      memcpy(rawIDData, card.rawIDData, 8);
-      break;
-    }
-  }
+	ISO14443(const byte & card) {
+		set(card);
+	}
 
-  ISO14443 & operator=(const ISO14443 & c) {
-    set(c);
-    return *this;
-  }
+	void set(const ISO14443 & card) {
+		type = card.type;
+		IDLength = card.IDLength;
+		switch (type) {
+		case FeliCa212kb: // Felica
+			memcpy(id, card.id, IDLength);
+			break;
+		default: // Mifare
+			memcpy(id, card.id, IDLength);
+			break;
+		}
+	}
 
-  void set(const byte tid, const byte * raw) {
-    //PN532::printHexString(raw, 16);
-    type = tid;
-    byte len;
-    switch (type) {
-      case FeliCa212kb:
-      case FeliCa424kb:
-      len = raw[1];
-      memcpy(IDm, raw + 3, 8);
-      memcpy(PMm, raw + 11, 8);
-      if ( len == 20)
-        memcpy(SysCode, raw + 19, 2);
-      break;
-      case Mifare:
-    default: // Mifare 106k TypeA
-      IDLength = raw[4];
-      memcpy(UID, raw + 5, IDLength);
-      break;
-    }
-  }
+	ISO14443 & operator=(const ISO14443 & c) {
+		set(c);
+		return *this;
+	}
 
-  const char * typeString(char * buf, const byte ttype) {
-	  switch(ttype) {
-	  case Mifare:
-		  strcpy(buf, "Mifare");
-		  break;
-	  case FeliCa212kb:
-		  strcpy(buf, "FeliCa212kb");
-		  break;
-	  case FeliCa424kb:
-		  strcpy(buf, "FeliCa424kb");
-		  break;
-	  }
-	  return buf;
-  }
+	void set(const byte tid, const byte * raw) {
+		//PN532::printHexString(raw, 16);
+		type = tid;
+		byte len;
+		switch (type) {
+		case FeliCa212kb:
+		case FeliCa424kb:
+			IDLength = 8;
+			len = raw[1];
+			memcpy(IDm, raw + 3, 8);
+			memcpy(PMm, raw + 11, 8);
+			if (len == 20)
+				memcpy(SysCode, raw + 19, 2);
+			break;
+		case Mifare:
+		default: // Mifare 106k TypeA
+			IDLength = raw[4];
+			memcpy(UID, raw + 5, IDLength);
+			break;
+		}
+	}
 
-  void init() {
-    type = 0xff;
-    memset(rawIDData, 0, 8);
-  }
+	const char * typeString(char * buf, const byte ttype) {
+		switch (ttype) {
+		case Mifare:
+			strcpy(buf, "Mifare");
+			break;
+		case FeliCa212kb:
+			strcpy(buf, "FeliCa212kb");
+			break;
+		case FeliCa424kb:
+			strcpy(buf, "FeliCa424kb");
+			break;
+		}
+		return buf;
+	}
 
-  const boolean operator==(const ISO14443 & c) const {
-    if ( type == c.type ) {
-      return memcmp(rawIDData, c.rawIDData, 8) == 0;
-    }
-    return false;
-  }
-  
-  inline const boolean operator!=(const ISO14443 & c) const {
-    return !(operator==(c));
-  }
+	void init() {
+		type = 0xff;
+		IDLength = 0;
+		memset(id, 0, 8);
+	}
+
+	const boolean operator==(const ISO14443 & c) const {
+		if ( type == c.type && IDLength == c.IDLength ) {
+			return memcmp(id, c.id, 8) == 0;
+		}
+		return false;
+	}
+
+	inline const boolean operator!=(const ISO14443 & c) const {
+		return !(operator==(c));
+	}
 };
 
-
 #endif /* NFCCARD_H_ */
-
-
 
