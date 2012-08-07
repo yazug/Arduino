@@ -41,8 +41,8 @@ DS3234 rtc(8);
 long clockval;
 
 void setup() {
-  pinMode(10, OUTPUT);
-  digitalWrite(10, HIGH);
+//  pinMode(10, OUTPUT);
+//  digitalWrite(10, HIGH);
   
   Serial.begin(9600);
   Serial.println("Hi.");

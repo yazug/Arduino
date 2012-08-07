@@ -133,6 +133,21 @@ struct ISO14443 {
     }
   }
 
+  const char * typeString(char * buf, const byte ttype) {
+	  switch(ttype) {
+	  case Mifare:
+		  strcpy(buf, "Mifare");
+		  break;
+	  case FeliCa212kb:
+		  strcpy(buf, "FeliCa212kb");
+		  break;
+	  case FeliCa424kb:
+		  strcpy(buf, "FeliCa424kb");
+		  break;
+	  }
+	  return buf;
+  }
+
   void init() {
     type = 0xff;
     memset(rawIDData, 0, 8);
