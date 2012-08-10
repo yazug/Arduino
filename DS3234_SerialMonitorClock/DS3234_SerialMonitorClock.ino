@@ -14,11 +14,6 @@
 
 #include <string.h>
 
-unsigned long atoBCD(char * str) {
-  unsigned long val = 0;
-
-}
-
 unsigned long asBCD(unsigned long lval) {
   unsigned long tmp;
   byte * p = (byte*)(&tmp);

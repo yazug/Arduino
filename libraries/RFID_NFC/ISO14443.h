@@ -64,7 +64,7 @@ struct IizukaMagTape {
 };
 
 struct ISO14443 {
-	static const byte data_size = 18;
+	static const byte IDdata_size = 18;
 	//
 	byte type;
 	byte IDLength;
@@ -76,7 +76,7 @@ struct ISO14443 {
 			byte PMm[8];
 			byte SysCode[2];
 		};
-		byte id[data_size];
+		byte id[IDdata_size];
 	};
 
 	ISO14443() {
@@ -96,10 +96,10 @@ struct ISO14443 {
 		IDLength = card.IDLength;
 		switch (type) {
 		case FeliCa212kb: // Felica
-			memcpy(id, card.id, IDLength);
+			memcpy(id, card.id, IDdata_size);
 			break;
 		default: // Mifare
-			memcpy(id, card.id, IDLength);
+			memcpy(id, card.id, IDdata_size);
 			break;
 		}
 	}

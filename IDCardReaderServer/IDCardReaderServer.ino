@@ -9,7 +9,7 @@
 #include "Ethernet.h"
 #include "DS3234.h"
 #include "Wire.h"
-#include "PN532_I2C.h"
+#include "PN532_Wire.h"
 #include "ISO14443.h"
 
 #include "Monitor.h"

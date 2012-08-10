@@ -117,7 +117,7 @@ uint8_t twi_readFrom(uint8_t address, uint8_t* data, uint8_t length, uint8_t sen
   uint8_t i;
 
   // ensure data will fit into buffer
-  if(TWI_BUFFER_LENGTH < length){
+  if( TWI_BUFFER_LENGTH < length){
     return 0;
   }
 
@@ -194,7 +194,7 @@ uint8_t twi_writeTo(uint8_t address, uint8_t* data, uint8_t length, uint8_t wait
   uint8_t i;
 
   // ensure data will fit into buffer
-  if(TWI_BUFFER_LENGTH < length){
+  if( TWI_BUFFER_LENGTH < length){
     return 1;
   }
 
@@ -461,7 +461,7 @@ SIGNAL(TWI_vect)
       break;
     case TW_SR_STOP: // stop or repeated start condition received
       // put a null char after data if there's room
-      if(twi_rxBufferIndex < TWI_BUFFER_LENGTH){
+      if(twi_rxBufferIndex < TWI_BUFFER_LENGTH ){
         twi_rxBuffer[twi_rxBufferIndex] = '\0';
       }
       // sends ack and stops interface for clock stretching

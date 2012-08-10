@@ -3,8 +3,8 @@
 #include "ISO14443.h"
 
 #include "Monitor.h"
-char tmp[64];
-Monitor mon(tmp);
+char tmp[80];
+Monitor mon(Serial);
 
 #define IRQ   (2)
 #define RESET (0xff)  // Not connected by default on the NFC Shield
@@ -29,7 +29,7 @@ void setup() {
   Wire.begin();
   nfc.begin();
 
-  Serial << "Hi." << endl;
+  mon << "Hi." << endl;
   reader_init();
 
   delay(500);
@@ -49,31 +49,35 @@ void loop() {
         card.set(buf[1], buf+3);
         Serial << "type = " << card.typeString((char*)buf, card.type) 
           << endl;
-        Serial << mon.printHex((byte*)card.id, card.IDLength) << endl;
+        mon.printHex((byte*)card.id, card.IDLength); mon << endl;
       }
       if ( card.type == 0x11 ) {
         Serial << "FeliCa" << endl 
-          << " ID: " << mon.printHex( card.id, card.IDLength) << endl;
-        Serial << "Pad: " << mon.printHex( card.PMm, card.IDLength) << endl;
+          << " ID: "; mon.printHex( card.id, card.IDLength); mon << endl;
+        Serial << "Pad: "; mon.printHex( card.PMm, card.IDLength); mon << endl;
         //        mon << mon.printHexString( card.SystemCode(), 2) << mon.endl;
 
         int len;
         // Polling command, with system code request.
         len = nfc.felica_Polling(buf, 0x00fe);
-        Serial << "Polling " << mon.printHex((word)0x00fe) << " ..." ;
+        mon << "Polling "; mon.print((word)0x00fe, HEX); mon << " ..." ;
 //        Serial.flush();
 //        Serial << mon.printHex(buf, len) << endl;
         Serial << "Request Service code: ";
         word scode = 0x1a8b; //, 0x170f, 0x1317, 0x1713, 0x090f, 0xffff 
         int snum = 0;
-        word blklist[] = { 0x0000 };
+        word blklist[] = { 0,1,2,3 };
         word codever = nfc.felica_RequestService(scode);
-        Serial << mon.printHex(scode) << ": " 
-          << mon.printHex(codever) << endl;
+        mon.print(scode, HEX); 
+        mon << ": ";
+        mon.print(codever, HEX); mon << endl;
         if ( codever != 0xffff && scode != 0xffff) {
-          c = nfc.felica_ReadWithoutEncryption(buf, scode, (byte) 1, blklist);
+          c = nfc.felica_ReadBlocksWithoutEncryption(buf, scode, (byte) 4, blklist);
           if ( c != 0 ) {
-            Serial << mon.printHex(buf, 16) << endl;
+            mon.printHex(buf, 16); mon << endl;
+            mon.printHex(buf+16, 16); mon << endl;
+            mon.printHex(buf+32, 16); mon << endl;
+            mon.printHex(buf+48, 16); mon << endl;
             //mon.printHex(tmp, 16, 255);
             Serial << endl;
           }
@@ -102,8 +106,8 @@ void loop() {
       } 
       else if ( card.type == 0x10 ) {
         Serial << "Mifare" << endl << "  ID: ";
-        Serial << mon.printHex(card.UID, card.IDLength);
-        Serial << endl;
+        mon.printHex(card.UID, card.IDLength);
+        mon << endl;
         /*
        if ( nfc.mifare_AuthenticateBlock(card.UID(), card.IDLength(), 4,
          factory_a) ) {
@@ -129,13 +133,14 @@ void reader_init() {
     delay(250);
   }
   if (! r ) {
-    Serial << "Couldn't find PN53x on Wire." << endl;
+    mon << "Couldn't find PN53x on Wire." << endl;
     while (1); // halt
   } 
   else {
     // Got ok data, print it out!
-    Serial << "Found chip PN5" << mon.printHex((byte) (r & 0xff)) 
-      << ", Firmware ver. " << (r>>8 & 0xFF) << '.' << (r>>16 & 0xFF) << endl;
+    mon << "Found chip PN5";
+    mon.print((byte) (r & 0xff));
+    mon  << ", Firmware ver. " << (r>>8 & 0xFF) << '.' << (r>>16 & 0xFF) << endl;
   }
 
   Serial << "SAMConfiguration...";

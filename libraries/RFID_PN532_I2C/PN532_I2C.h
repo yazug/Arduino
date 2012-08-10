@@ -206,6 +206,8 @@ public:
 	// Block list accepts only two byte codes.
 	byte felica_ReadWithoutEncryption(byte * resp, const word servcode,
 			const byte blknum, const word blklist[]);
+	byte felica_ReadBlocksWithoutEncryption(byte * resp, const word servcode,
+			const byte blknum, const word blklist[]);
 
 };
 

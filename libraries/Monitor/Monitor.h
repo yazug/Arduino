@@ -19,44 +19,58 @@ inline Stream &operator <<(Stream &stream, T arg) {
 	return stream;
 }
 
-class Monitor {
-	char * sbuf;
+class Monitor : public Stream {
+	Stream & stream;
+//	char * sbuf;
 
 public:
-	Monitor(char * buf) :
-			sbuf(buf) {
+    virtual size_t write(uint8_t b) { return stream.write(b); }
+    using Print::write;
+    using Print::print;
+
+    virtual int available() { return stream.available(); }
+    virtual int read() { return stream.read(); }
+    virtual int peek() { return stream.peek(); }
+    virtual void flush() { stream.flush(); }
+
+	Monitor(Stream & s) : stream(s) {
 	}
 
-	const char * printHex(const byte * a, const int length) {
-		char * p = sbuf;
+
+
+	void printHex(byte * a, const int length) {
 		for (int i = 0; i < length; i++) {
-			sprintf(p, "%02X ", a[i]);
-			p += 3;
+			print(*a>>4, HEX);
+			print(*a&0x0f, HEX);
+			print(' ');
+			a++;
 		}
-		return sbuf;
+		return;
 	}
 
-	const char * printHex(const char * s, const int length) {
-		char * p = sbuf;
+	void printHex(const char * s, const int length) {
 		for (int i = 0; i < length; i++) {
 			if (isprint(s[i]))
-				sprintf(p, "%c ", s[i]);
-			else
-				sprintf(p, "\\x%02x ", s[i]);
-			p += 3;
+				print(s[i]);
+			else {
+				print("$");
+				print((byte)s[i], HEX);
+			}
 		}
-		return sbuf;
+		return;
 	}
 
-	const char * printHex(const word * a, const int length) {
-		char * p = sbuf;
+	void printHex(const word * a, const int length) {
 		for (int i = 0; i < length; i++) {
-			sprintf(p, "%04X ", a[i]);
-			p += 5;
+			print(a[i]>>12, HEX);
+			print(a[i]>>8&0x0f, HEX);
+			print(a[i]>>4&0x0f, HEX);
+			print(a[i]&0x0f, HEX);
+			print(' ');
 		}
-		return sbuf;
+		return;
 	}
-
+/*
 	const char * printHex(const byte b) {
 		sprintf(sbuf, "%02X", b);
 		return sbuf;
@@ -66,6 +80,7 @@ public:
 		sprintf(sbuf, "%04X", w);
 		return sbuf;
 	}
+	*/
 };
 
 #endif /* MONITOR_H_ */
