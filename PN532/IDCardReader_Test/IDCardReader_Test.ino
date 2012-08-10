@@ -16,7 +16,8 @@ DS3234 rtc(10);
 long clockval;
 LCD_ST7032i lcd;
 
-Monitor mon(Serial);
+byte buf[48];
+Monitor mon((char*)buf);
 
 #define IRQ   (2)
 #define RESET (0xff)  // Not connected by default on the NFC Shield
@@ -29,7 +30,6 @@ const byte factory_a[] = {
 
 long prev;
 ISO14443 card;
-byte buf[48];
 
 byte polling[] = {
   2,
@@ -53,9 +53,9 @@ void setup() {
   digitalWrite(5, LOW);
   tone(4, 1760, 20);
 
-  mon << "Hi." << endl;
+  Serial << "Hi." << endl;
   rtc.update();
-  mon << rtc.calendarString((char*) buf) << " " << rtc.timeString((char*) buf) << endl;
+  Serial << rtc.calendarString((char*) buf) << " " << rtc.timeString((char*) buf) << endl;
   lcd.setContrast(42);
   lcd.print(rtc.calendarString((char*) buf));
 
@@ -79,54 +79,54 @@ void loop() {
         card = tcard;
         if ( card.type == 0x11 ) {
           rtc.update();
-          mon << rtc.calendarString((char*) buf) << " " 
+          Serial << rtc.calendarString((char*) buf) << " " 
             << rtc.timeString((char*) buf) << endl;
           //
           tone(4, 1800, 100);
 
-          mon << "FeliCa IDm: " 
-            << mon.printArray( card.IDm, 8);
-          mon << ", PMm: " << mon.printArray( card.PMm, 8) 
+          Serial << "FeliCa IDm: " 
+            << mon.printHex( card.IDm, 8);
+          Serial << ", PMm: " << mon.printHex( card.PMm, 8) 
             << " detected. " << endl;
 
           if ( read_FCF() == 0 ) {
-            mon << endl;
+            Serial << endl;
             tone(4, 1200, 100);
             card.init();
           }
         } 
         else if ( card.type == 0x10 ) {
           rtc.update();
-          mon << rtc.calendarString((char*) buf) << " " 
+          Serial << rtc.calendarString((char*) buf) << " " 
             << rtc.timeString((char*) buf) << endl;
           tone(4, 1800, 100);
           Serial << "Mifare" << "  ID: ";
-          mon.printArray(card.UID, card.IDLength);
+          mon.printHex(card.UID, card.IDLength);
           Serial << endl;
           if ( nfc.mifare_AuthenticateBlock(card.UID, card.IDLength, 4,
           IizukaKey_b) ) {
             Serial << "Auth Success." << endl;
             nfc.mifare_ReadDataBlock(4, buf);
-            mon.printArray(buf, 16); 
-            mon << "  ";
-            mon.printArray((char*)buf, 16); 
+            mon.printHex(buf, 16); 
+            Serial << "  ";
+            mon.printHex((char*) buf, 16); 
             Serial << endl;
             nfc.mifare_ReadDataBlock(5, buf);
-            mon.printArray(buf, 16); 
-            mon << "  ";
-            mon.printArray((char*)buf, 16); 
+            mon.printHex(buf, 16); 
+            Serial << "  ";
+            mon.printHex((char*)buf, 16); 
             Serial << endl;
             nfc.mifare_ReadDataBlock(6, buf);
-            mon.printArray(buf, 16); 
-            mon << "  ";
-            mon.printArray((char*)buf, 16); 
+            mon.printHex(buf, 16); 
+            Serial << "  ";
+            mon.printHex((char*)buf, 16); 
             Serial << endl;
           } 
           else {
             tone(4, 1200, 100);
             Serial << "Failure." << endl;
           }
-          mon << endl;
+          Serial << endl;
         }
       } 
     }
@@ -146,10 +146,10 @@ byte read_FCF() {
   len = nfc.felica_Polling(buf, syscode);
   if ( len == 0 )
     return 0;
-  mon << "System code " << mon.printArray(&syscode, 1);
-  mon <<" specific IDm ";
-  mon.printArray(buf, 8);
-  mon << endl;
+  Serial << "System code " << mon.printHex(&syscode, 1);
+  Serial <<" specific IDm ";
+  mon.printHex(buf, 8);
+  Serial << endl;
   // low-byte first service code.
   // Suica, Nimoca, etc. 0x090f system 0x0300
   // Edy service 0x170f (0x1317), system 0x00FE // 8280
@@ -167,21 +167,21 @@ byte read_FCF() {
   for (word blkno = 0; blkno < 4; blkno++) {
     c = nfc.felica_ReadWithoutEncryption(buf, servcode, 1, (word*)&blkno);
     if ( c == 0 ) {
-      mon << endl << "failed. " << endl;
+      Serial << endl << "failed. " << endl;
       return 0;
     }
-    mon.printArray(&blkno, 1) ;
-    mon << ": " << mon.printArray(buf, 16) << "  " 
-      << mon.printArray((char*) buf, 16) << endl;
+    mon.printHex(&blkno, 1) ;
+    Serial << ": " << mon.printHex(buf, 16) << "  " 
+      << mon.printHex((char*) buf, 16) << endl;
   }
-  mon << "--- End of FCF reading ---" << endl << endl;
+  Serial << "--- End of FCF reading ---" << endl << endl;
   return 1;
 }
 
 
 void PN532_init() {
 
-  mon << "Firmware version: ";
+  Serial << "Firmware version: ";
   unsigned long r = 0;
   for (int i = 0; i < 10 ; i++) {
     if ( (r = nfc.getFirmwareVersion()) )
@@ -189,12 +189,12 @@ void PN532_init() {
     delay(250);
   }
   if (! r ) {
-    mon << "Couldn't find PN53x on Wire." << endl;
+    Serial << "Couldn't find PN53x on Wire." << endl;
     while (1); // halt
   } 
   else {
-    mon.printArray((byte*)&r, 4); 
-    mon << endl;
+    mon.printHex((byte*)&r, 4); 
+    Serial << endl;
   }
 
   // Got ok data, print it out!
@@ -206,7 +206,7 @@ void PN532_init() {
   Serial << "SAMConfiguration" << endl;
 
   nfc.SAMConfiguration();
-  mon << endl;
+  Serial << endl;
 }
 
 

@@ -1,5 +1,5 @@
-#include "utility/w5100.h"
-#include "Ethernet_SS.h"
+#include "w5100.h"
+#include "Ethernet.h"
 #include "Dhcp.h"
 
 // XXX: don't make assumptions about the value of MAX_SOCK_NUM.

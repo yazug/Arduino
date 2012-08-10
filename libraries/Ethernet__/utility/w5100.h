@@ -127,11 +127,8 @@ public:
 };
 
 class W5100Class {
-private:
-	static const byte pin_SS = 10;
 
 public:
-
   void init();
 
   /**
@@ -326,6 +323,7 @@ private:
   uint16_t RBASE[SOCKETS]; // Rx buffer base address
 
 private:
+  /*
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
   inline static void initSS()    { DDRB  |=  _BV(4); };
   inline static void setSS()     { PORTB &= ~_BV(4); };
@@ -339,26 +337,21 @@ private:
   inline static void setSS()     { PORTB &= ~_BV(0); };
   inline static void resetSS()   { PORTB |=  _BV(0); }; 
 #else
-  /*
   inline static void initSS()    { DDRB  |=  _BV(2); };
   inline static void setSS()     { PORTB &= ~_BV(2); };
   inline static void resetSS()   { PORTB |=  _BV(2); };
-  */
-  inline static void initSS()    { pinMode(pin_SS, OUTPUT); };
-  inline static void setSS()     { select(); };
-  inline static void resetSS()   { deselect(); };
-  static void select() {
+#endif
+*/
+  inline static void initSS() { pinMode(SS, OUTPUT); }
+  inline static void setSS() {
 	  SPI.setDataMode(SPI_MODE0);
 	  SPI.setBitOrder(MSBFIRST);
 	  SPI.setClockDivider(SPI_CLOCK_DIV4);
-
-	  digitalWrite(pin_SS, LOW);
+	  digitalWrite(SS, LOW);
   }
-  static void deselect() {
-	  digitalWrite(pin_SS, HIGH);
+  inline static void resetSS() {
+	  digitalWrite(SS, HIGH);
   }
-#endif
-
 
 };
 

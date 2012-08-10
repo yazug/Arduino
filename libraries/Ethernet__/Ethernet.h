@@ -1,5 +1,5 @@
-#ifndef _ETHERNET_SS_H_
-#define _ETHERNET_SS_H_
+#ifndef ethernet_h
+#define ethernet_h
 
 #include <inttypes.h>
 //#include "w5100.h"
