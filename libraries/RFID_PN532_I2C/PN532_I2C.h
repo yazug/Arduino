@@ -85,10 +85,11 @@ class PN532 {
 	byte packet[PACKBUFFSIZE];
 	byte lastStatus;
 	//
-	union {
-		byte IDm[8];
-		struct {
-			byte IDLength;
+	struct {
+		byte NFCType;
+		byte IDLength;
+		union {
+			byte IDm[8];
 			byte UID[7];
 		};
 	} target;
@@ -156,8 +157,11 @@ public:
 
 	static const byte BaudrateType_106kbitTypeA = 0x00;
 	static const byte BaudrateType_212kbitFeliCa = 0x01;
+	static const byte BaudrateType_424kbitFeliCa = 0x02;
+	static const byte BaudrateType_106kbitTypeB = 0x03;
 	byte InListPassiveTarget(const byte maxtg, const byte brty,
-			const byte initlen = 0, byte * data = NULL, const long & wmillis = 100);
+			const byte initlen = 0, byte * data = NULL, const long & wmillis =
+					100);
 
 	static const byte Type_GenericPassiveTypeA = 0x00;
 	static const byte Type_GenericPassive212kbFeliCa = 0x01;
@@ -166,16 +170,20 @@ public:
 	static const byte Type_Mifare = 0x10;
 	static const byte Type_FeliCa212kb = 0x11;
 	static const byte Type_FeliCa424kb = 0x12;
+	static const byte Type_Empty = 0xff;
 
 	byte InListPassiveTarget(const byte maxtg, const byte brty, byte * data,
 			const byte initlen, const long & wmillis = 100);
 	byte InAutoPoll(const byte pollnr, const byte per, const byte * types,
 			const byte typeslen);
 
-	inline byte autoPoll(const byte polltypes[], byte * resp, const long & waitmillis = 1000) {
-		if ( InAutoPoll(1,2, polltypes+1, polltypes[0])
-			&& getCommandResponse(PN532::COMMAND_InAutoPoll, resp, waitmillis))
+	inline byte autoPoll(const byte polltypes[], byte * resp,
+			const long & waitmillis = 500) {
+		if (InAutoPoll(2, 1, polltypes + 1, polltypes[0])
+				&& getCommandResponse(PN532::COMMAND_InAutoPoll, resp,
+						waitmillis)) {
 			return resp[0];
+		}
 		return 0;
 	}
 
@@ -189,8 +197,18 @@ public:
 	byte listPassiveTarget(byte * data, const byte brty =
 			BaudrateType_106kbitTypeA, const word syscode = 0xffff);
 
-	byte mifare_AuthenticateBlock(const byte * uid, byte uidLen,
-			word blockNumber, const byte * keyData);
+	byte getListPassiveTarget(byte * data) {
+		byte count = getCommandResponse(COMMAND_InListPassivTarget, packet);
+		if ( !count )
+			return 0;
+	//	count -= 2; // remove checksum and postamble bytes.
+		memcpy(data, packet, count);
+		return packet[0];
+	}
+
+	void setUID(const byte * uid, const byte uidLen, const byte cardtype = Type_Mifare);
+
+	byte mifare_AuthenticateBlock(word blockNumber, const byte * keyData);
 	byte mifare_ReadDataBlock(uint8_t blockNumber, uint8_t * data);
 
 	byte InCommunicateThru(const byte * data, const byte len);

@@ -331,40 +331,27 @@ byte PN532::getCommandResponse(const byte cmd, byte * resp,
 
 byte PN532::listPassiveTarget(byte * data, const byte brty,
 		const word syscode) {
-	byte inidatalen = 0;
+	byte length = 0;
 	switch (brty) {
 	case BaudrateType_212kbitFeliCa:
-		inidatalen = 5;
-		memcpy(data, "\x00\xfe\x00\x00\x00", inidatalen);
-		data[1] = syscode & 0xff;
+	case BaudrateType_424kbitFeliCa:
+		length = 5;
+		memset(data, 0, length);
+		data[1] = syscode & 0xff;  // System Code is in Little-endian.
 		data[2] = syscode >> 8;
 		break;
 	default:
 		break;
 	}
-	if (!InListPassiveTarget(1, brty, inidatalen, data, 50)) {
+	if (!InListPassiveTarget(1, brty, length, data, 50)) {
 #ifdef PN532DEBUG
 		Serial.println("InListPassiveTarget ACK failed. ");
 #endif
 		return 0;
 	}
-
-	byte count = getCommandResponse(COMMAND_InListPassivTarget, packet);
-#ifdef FELICADEBUG
-	Serial.print("InListPassiveTarget response: ");
-	printHexString(packet, count);
-	Serial.println();
-	Serial.print("count = ");
-	Serial.println(count, DEC);
-#endif
-	if (count == 0) {
-		return 0;
-	}
-//	count -= 2; // remove checksum and postamble bytes.
-	memcpy(data, packet, count);
-	return packet[0];
-
+	return 1;
 }
+
 
 byte PN532::InDataExchange(const byte Tg, const byte * data,
 		const byte length) {
@@ -429,8 +416,13 @@ byte PN532::InDataExchange(const byte Tg, const byte micmd, const byte blkaddr,
 	return 1;
 }
 
-byte PN532::mifare_AuthenticateBlock(const byte * uid, byte uidLen, word blkn,
-		const byte * keyData) {
+void PN532::setUID(const byte * uid, const byte uidLen, const byte cardtype) {
+	target.NFCType = cardtype;
+	target.IDLength = max(4, uidLen);
+	memcpy(target.UID, uid, uidLen);
+}
+
+byte PN532::mifare_AuthenticateBlock(word blkn, const byte * keyData) {
 	uint8_t len;
 	byte tmp[16];
 
@@ -440,7 +432,8 @@ byte PN532::mifare_AuthenticateBlock(const byte * uid, byte uidLen, word blkn,
 
 	// Prepare the authentication command //
 	memcpy(tmp, keyData + 1, 6);
-	memcpy(tmp + 6, uid, max(4, uidLen));
+//	memcpy(tmp + 6, uid, max(4, uidLen));
+	memcpy(tmp + 6, target.UID, max(4, target.IDLength));
 
 	byte authcmd;
 	byte rescount;
@@ -462,7 +455,7 @@ byte PN532::mifare_AuthenticateBlock(const byte * uid, byte uidLen, word blkn,
 		break;
 	}
 
-	if (InDataExchange(1, authcmd, blkn, tmp, uidLen + 6)) {
+	if (InDataExchange(1, authcmd, blkn, tmp, target.IDLength + 6)) {
 		// Read the response packet
 		rescount = getCommandResponse(COMMAND_InDataExchange, packet);
 #ifdef MIFAREDEBUG
@@ -484,6 +477,9 @@ byte PN532::mifare_ReadDataBlock(uint8_t blockNumber, uint8_t * data) {
 	Serial.println(blockNumber);
 #endif
 
+	// Access the Target 1 after polling by InList or AutoPoll
+	// Authentication must be succeeded so the uid (and its length) is
+	// stored in target.UID
 	/* Send the command */
 	if (!InDataExchange(1, MIFARE_CMD_READ, blockNumber, packet, 0)) {
 #ifdef MIFAREDEBUG
@@ -577,11 +573,12 @@ byte PN532::felica_Polling(byte * resp, const word syscode) {
 	byte result = InCommunicateThru(resp, 5);
 	result = getCommunicateThruResponse(resp);
 	if (resp[0] == FELICA_CMD_POLLING + 1) {
-		memcpy(resp, resp + 1, result - 9);
 		target.IDLength = 8;
-		memcpy(target.IDm, resp, result - 9);
+		memcpy(target.IDm, resp + 1, target.IDLength);
+		target.NFCType = Type_FeliCa212kb;
 		return result;
 	}
+	target.NFCType = Type_Empty;
 	target.IDLength = 0;
 	return 0;
 }

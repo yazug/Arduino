@@ -18,9 +18,9 @@ static const byte TypeJewel = 0x03;
 static const byte Mifare = 0x10;
 static const byte FeliCa212kb = 0x11;
 static const byte FeliCa424kb = 0x12;
+static const byte Type_Empty = 0xff;
 
-static const word FELICA_SYSCODE_EDY = 0x00FE;
-static const word FELICA_SYSCODE_FCF = 0x00FE;
+static const word FELICA_SYSCODE_COMMON = 0x00FE;
 static const word FELICA_SYSCODE_SUICA = 0x0003;
 static const word FELICA_SERVICE_SUICA = 0x090F;
 static const word FELICA_SERVICE_EDY = 0x170F;
@@ -39,43 +39,45 @@ static const word FELICA_SERVICE_FCF = 0x1a8b;
  };
  */
 
-struct FCF {
-	byte res0[2];
-	char id[8];
-	byte res1[4];
-	char issue;
-	byte res2;
-	char kana[16];
-	byte res3[16];
-	char goodthru[8];
-	byte res4[8];
-};
-
-struct IizukaMagTape {
-	char idtype[2];
-	char id[8];
-	char issue;
-	char res0[5];
-	word kanji[8];
-	char dayofbirth[7];
-	char gender;
-	char dayofissue[7];
-	char res1[1];
+union IDCardData {
+	struct FCF {
+		enum GENDER {
+			UNKNOWN = 0, MALE = 1, FEMALE = 2
+		};
+		static const long KyushuInstOfTech = 40010071;
+		word division;
+		char id[12];
+		char issue;
+		char gender;
+		//
+		char kana[16];
+		char school[8];
+		char dateofissue[8];
+		char goodthru[8];
+		byte pmcontrol[8];
+	} felica;
+	struct IizukaMagTape {
+		word division;
+		char id[8];
+		char issue;
+		char res0[5];
+		word kanji[8];
+		char dayofbirth[7];
+		char gender;
+		char dateofissue[7];
+		char res1[1];
+	} mifare;
 };
 
 struct ISO14443 {
-	static const byte IDdata_size = 18;
+	static const byte IDdata_size = 8;
 	//
 	byte type;
 	byte IDLength;
 	union {
 		byte UID[7];
 		byte NUID[7];
-		struct {
-			byte IDm[8];
-			byte PMm[8];
-			byte SysCode[2];
-		};
+		byte IDm[8];
 		byte id[IDdata_size];
 	};
 
@@ -96,10 +98,10 @@ struct ISO14443 {
 		IDLength = card.IDLength;
 		switch (type) {
 		case FeliCa212kb: // Felica
-			memcpy(id, card.id, IDdata_size);
+			memcpy(IDm, card.IDm, IDLength);
 			break;
 		default: // Mifare
-			memcpy(id, card.id, IDdata_size);
+			memcpy(UID, card.UID, IDLength);
 			break;
 		}
 	}
@@ -119,9 +121,9 @@ struct ISO14443 {
 			IDLength = 8;
 			len = raw[1];
 			memcpy(IDm, raw + 3, 8);
-			memcpy(PMm, raw + 11, 8);
-			if (len == 20)
-				memcpy(SysCode, raw + 19, 2);
+//			memcpy(PMm, raw + 11, 8);
+//			if (len == 20)
+//				memcpy(SysCode, raw + 19, 2);
 			break;
 		case Mifare:
 		default: // Mifare 106k TypeA
@@ -147,14 +149,14 @@ struct ISO14443 {
 	}
 
 	void init() {
-		type = 0xff;
+		type = Type_Empty;
 		IDLength = 0;
 		memset(id, 0, 8);
 	}
 
 	const boolean operator==(const ISO14443 & c) const {
-		if ( type == c.type && IDLength == c.IDLength ) {
-			return memcmp(id, c.id, 8) == 0;
+		if (type == c.type && IDLength == c.IDLength) {
+			return memcmp(id, c.id, IDLength) == 0;
 		}
 		return false;
 	}

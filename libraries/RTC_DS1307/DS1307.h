@@ -62,7 +62,7 @@ public:
 public:
 	long time, cal;
 
-	DS1307() {
+	DS1307() : time(0), cal(0) {
 	}
 
 	void init() {

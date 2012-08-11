@@ -1,5 +1,5 @@
 #include "Wire.h"
-#include "PN532_Wire.h"
+#include "PN532_I2C.h"
 #include "ISO14443.h"
 
 #include "CharacterLCD.h"
@@ -105,8 +105,8 @@ void loop() {
           mon << "Mifare" << "  ID: ";
           mon.printHex(card.UID, card.IDLength);
           mon << endl;
-          if ( nfc.mifare_AuthenticateBlock(card.UID, card.IDLength, 4,
-          IizukaKey_b) ) {
+          nfc.setUID(card.UID, card.IDLength);
+          if ( nfc.mifare_AuthenticateBlock(4, IizukaKey_b) ) {
             mon << "Auth Success." << endl;
             nfc.mifare_ReadDataBlock(4, buf);
             mon.printHex(buf, 16); 
