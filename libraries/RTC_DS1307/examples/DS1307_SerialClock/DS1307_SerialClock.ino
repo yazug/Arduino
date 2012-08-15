@@ -73,15 +73,15 @@ void loop() {
   }
   
   delay(100);
-  rtc.getTime(temp);
-  if ( temp != clockval ) {
-    clockval = temp;
-    rtc.getCalendar(temp);
-    Serial.print( rtc.clockString((char*)buf, clockval) );
+  rtc.updateTime();
+  if ( rtc.time != clockval ) {
+    clockval = rtc.time;
+    rtc.updateCalendar();
+    Serial.print( rtc.timeString((char*) buf) );
     Serial.print(" ");
-    Serial.print( rtc.calendarString((char*)buf, temp) );
+    Serial.print( rtc.calendarString((char*) buf) );
     Serial.print(" ");
-    Serial.print( rtc.copyNameOfDay((char*)buf, temp&0xff) );
+    Serial.print( rtc.copyNameOfDay((char*) buf, rtc.dayOfWeek()) );
     Serial.println();
     delay(100);
   }

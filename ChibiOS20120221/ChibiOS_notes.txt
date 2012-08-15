@@ -1,0 +1,38 @@
+How this port was made:
+
+Make these directories in Adruino libriaries folder
+
+ChibiOS
+ChibiOS/utility
+
+Create ChibiOS.h and ChibiOS.cpp in the ChibiOS folder.  See these file for content.
+
+
+
+download ChibiOS/RT 2.4.0
+
+copy *.c and *.h files from these directories to the utility folder
+
+ChibiOS_2.4.0\os\kernel\src
+ChibiOS_2.4.0\os\kernel\include
+ChibiOS_2.4.0\os\hal\src
+ChibiOS_2.4.0\os\hal\include
+ChibiOS_2.4.0\os\hal\platforms\AVR
+ChibiOS_2.4.0\os\ports\GCC\AVR
+ChibiOS_2.4.0\boards\OLIMEX_AVR_MT_128
+
+
+copy these *.h files from
+ChibiOS_2.4.0\demos\AVR-ATmega128-GCC
+
+chconf.h
+halconf.h
+mcuconf.h
+
+
+
+edit these files as shown in ChibiOS_diff.txt
+board.c
+chconf.h
+chcore.h
+halconf.h

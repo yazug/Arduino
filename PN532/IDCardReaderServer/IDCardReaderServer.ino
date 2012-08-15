@@ -4,6 +4,7 @@
  Circuit:
  * Ethernet shield attached to pins 10, 11, 12, 13
  */
+#include <EEPROM.h>
 
 #include <SPI.h>
 #include "Ethernet.h"
@@ -16,11 +17,15 @@
 
 #include "IDCardReader.h"
 
-DS3234 rtc(8);
+DS3234 rtc(9);
 
 #define IRQ   (2)
-#define RESET (0xff)  // Not connected by default on the NFC Shield
+#define RESET (7)  // Not connected by default on the NFC Shield
 PN532 nfc(PN532::I2C_ADDRESS, IRQ, RESET);
+byte polling[] = { 
+  2, TypeF, TypeA };
+long prevPolling;
+long prevDetect;
 
 const byte IizukaKey_b[] = {
   0xBB, 0x63, 0x45, 0x74, 0x55, 0x79, 0x4B };
@@ -29,30 +34,42 @@ const byte factory_a[] = {
 
 ISO14443 card;
 byte buf[80];
-IDLog cardlog[8];
+struct {
+  const static int table_size = 8;
+  IDLog table[table_size];
+  int index;
+  int count;
+
+  void init() {
+    index = 0;
+    count = 0;
+    for(int i = 0; i < table_size; i++) {
+      table[i].date = 0;
+      table[i].time = 0;
+      table[i].nfctype = 0;
+    }
+  }
+
+  IDLog & last() {
+    return table[index];
+  }
+
+  IDLog & at(const int i) {
+    return table[(index + 1 + i) % count];
+  }
+
+  void add() {
+    if ( count < table_size )
+      count++;
+    index++;
+    if ( !(index < count ) )
+      index %= count;
+  }
+
+} 
+cardlog;
 
 Monitor mon(Serial);
-
-byte polling[] = {
-  2,
-  TypeF,
-  TypeA
-};
-long prevPolling;
-long prevDetect;
-
-
-// Enter a MAC address and IP address for your controller below.
-// The IP address will be dependent on your local network:
-byte mac[] = { 
-  0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
-IPAddress ip(192,168,1, 177);
-IPAddress gateway(192,168,1, 1);
-IPAddress subnet(255, 255, 0, 0);
-
-// Initialize the Ethernet server library
-// with the IP address and port you want to use 
-// (port 80 is default for HTTP):
 EthernetServer server(80);
 
 void setup() {
@@ -64,30 +81,33 @@ void setup() {
 
   SPI.begin();
   // start the Ethernet connection and the server:
-  Ethernet.begin(mac, ip, gateway, subnet);
+  init_Ethernet();
   server.begin();
-
-  rtc.begin();
-  rtc.update();
+  mon << "server is at " << Ethernet.localIP() << endl;
 
   Wire.begin();
   nfc.begin();
   PN532_init();
 
-  Serial.print("server is at ");
-  Serial.println(Ethernet.localIP());
+  rtc.begin();
+  rtc.update();
 
   card.init();
+  Serial << "Start." << endl;
 }
 
 
 void loop() {
+  byte cnt;
   ISO14443 tempcard;
 
   if ( millis() > prevPolling + 100 ) {
+    //Serial.println("polling..");
     prevPolling = millis();
-    if ( nfc.autoPoll(polling, buf) ) {
-      //mon << mon.printArray(tmp, 8) << mon.endl;
+    if ( nfc.InAutoPoll(1, 1, polling+1, polling[0]) 
+      && (cnt = nfc.getCommandResponse(buf)) ) {
+      //  mon.printHex(buf, 8);
+      // mon << endl;
       // NbTg, type1, length1, [Tg, ...]
       tempcard.set(buf[1], buf+3);
       if ( tempcard == card 
@@ -101,31 +121,41 @@ void loop() {
           prevDetect = millis();
           if ( readFCF(card) ) {
             IDCardData & idcard = (IDCardData&) buf;
-            cardlog[0].time = rtc.time;
-            cardlog[0].date = rtc.cal;
-            cardlog[0].nfctype = card.type;
-            memcpy(cardlog[0].nfcid, card.IDm, card.IDLength);
-            memcpy(cardlog[0].id, idcard.felica.id, 8);
-            memcpy(cardlog[0].school, idcard.felica.school, 8);
-            cardlog[0].issue = idcard.felica.issue;
+            cardlog.add();
+            cardlog.last().time = rtc.time;
+            cardlog.last().date = rtc.cal;
+            cardlog.last().nfctype = card.type;
+            memcpy(cardlog.last().nfcid, card.IDm, card.IDLength);
+            memcpy(cardlog.last().id, idcard.felica.id, 8);
+            memcpy(buf, idcard.felica.school, 8);
+            buf[8] = 0;
+            cardlog.last().school = strtol((char*)buf, NULL, HEX);
+            cardlog.last().issue = idcard.felica.issue;
           }
-
+          mon << "cardlog count = " << cardlog.count << endl;
         }
         else if ( card.type == 0x10 ) {
           rtc.update();
           prevDetect = millis();
           if ( readMifare(card) ) {
             IDCardData & idcard = (IDCardData&) buf;
-            cardlog[0].time = rtc.time;
-            cardlog[0].date = rtc.cal;
-            cardlog[0].nfctype = card.type;
-            memcpy(cardlog[0].nfcid, card.UID, card.IDLength);
-            memcpy(cardlog[0].id, idcard.mifare.id, 8);
-            memset(cardlog[0].school, 0, 8);
-            cardlog[0].issue = idcard.mifare.issue;
+            cardlog.add();
+            cardlog.last().time = rtc.time;
+            cardlog.last().date = rtc.cal;
+            cardlog.last().nfctype = card.type;
+            memcpy(cardlog.last().nfcid, card.UID, card.IDLength);
+            memcpy(cardlog.last().id, idcard.mifare.id, 8);
+            cardlog.last().school = 0;
+            cardlog.last().issue = idcard.mifare.issue;
           }
+          mon << "cardlog count = " << cardlog.count << endl;
         }
       } 
+    } 
+    else {
+      mon << "Comm status: ";
+      mon.print(nfc.communicationStatus(), HEX);
+      mon << endl;
     }
   }
 
@@ -146,24 +176,27 @@ void loop() {
           // send a standard http response header
           send_header(client);
           client.println("<html>");
-          client.println("<meta http-equiv=\"refresh\" content=\"10\">");           // add a meta refresh tag, so the browser pulls again every 5 seconds:
+          client.println("<meta http-equiv=\"refresh\" content=\"10\">"); 
+          // add a meta refresh tag, so the browser pulls again every 5 seconds:
           rtc.updateTime();
           char tmp[32];
           client.print(rtc.timeString(tmp));
           client.println("<br />");
-          client.print(cardlog[0].date, HEX);
-          client.println("-");
-          client.print(cardlog[0].time, HEX);
-          client.println("-");
-          for(int i = 0; i < 8; i++) {
-            client.print((char) cardlog[0].school[i]);
-          }
-          client.println("-");
-          for(int i = 0; i < 8; i++) {
-            client.print((char) cardlog[0].id[i]);
-          }
-          client.println("-");
-          client.print((char)cardlog[0].issue);
+          /*
+          for(int cnum = 0; cnum < cardlog.count; cnum++) {
+           client.print(cardlog.at(cnum).date, HEX);
+           client.println("-");
+           client.print(cardlog.at(cnum).time, HEX);
+           client.println("-");
+           client.print(cardlog.at(cnum).school, HEX);
+           client.println("-");
+           memcpy(tmp, cardlog.at(cnum).id, 8);
+           tmp[8] = 0;
+           client.print((char*) tmp);
+           client.println("-");
+           client.print((char)cardlog.at(cnum).issue);
+           }
+           */
           client.println("<br />");
           client.println("</html>");
           break;
@@ -195,27 +228,22 @@ void send_header(EthernetClient & client) {
 }
 
 void PN532_init() {
-  Serial << "Firmware version: ";
-  unsigned long r = 0;
-  for (int i = 0; i < 10 ; i++) {
-    if ( (r = nfc.getFirmwareVersion()) )
-      break;
-    delay(250);
-  }
-  if (! r ) {
+  byte cnt = 0;
+  for (int i = 0; i < 10 && !( nfc.GetFirmwareVersion() && (cnt = nfc.getCommandResponse(buf)) ); i++) 
+    delay(150);
+  if (! cnt ) {
     Serial << "Couldn't find PN53x on Wire." << endl;
     while (1); // halt
   } 
-  // Got ok data, print it out!
-  Serial << "Found chip PN5";
-  Serial.println(r & 0xff, HEX);
-  Serial << "Firmware ver. " << (r>>8 & 0xFF) << '.' 
-    << (r>>16 & 0xFF) << endl;
-
-  Serial << "SAMConfiguration" << endl;
+  Serial << "PN53x IC ver. " << (char)buf[0] << ", Firmware ver. " 
+    << buf[1] << '.' << buf[2] << endl;
 
   nfc.SAMConfiguration();
-  Serial << endl;
+  nfc.getCommandResponse(buf);
+  if ( nfc.communicationStatus() == PN532::RESP_RECEIVED) {
+    Serial << "SAMConfiguration," << endl;
+    nfc.set_default_PowerDown();
+  }
 }
 
 byte readFCF(ISO14443 & ccard) {
@@ -229,9 +257,9 @@ byte readFCF(ISO14443 & ccard) {
   word scode = 0x1a8b; //, 0x170f, 0x1317, 0x1713, 0x090f, 0xffff 
   int snum = 0;
   word blklist[] = { 
-    0,1,2,3       };
+    0,1,2,3               };
   //
- word codever = nfc.felica_RequestService(scode);
+  word codever = nfc.felica_RequestService(scode);
   //  mon << "Service code = ";
   //  mon.print(scode, HEX); 
   //  mon << ", version = ";
@@ -263,11 +291,13 @@ byte readFCF(ISO14443 & ccard) {
 }
 
 byte readMifare(ISO14443 & card) {
+  byte res;
   mon << "Mifare ID ";
   mon.printHex(card.UID, card.IDLength);
   mon << endl;
   nfc.setUID(card.UID, card.IDLength, card.type);
-  if ( nfc.mifare_AuthenticateBlock(4, IizukaKey_b) ) {
+  if ( nfc.mifare_AuthenticateBlock(4, IizukaKey_b) 
+    && nfc.getCommandResponse(&res) && res == 0 ) {
     for (int blk = 0; blk < 3; blk++) {
       if ( !nfc.mifare_ReadDataBlock(4+blk, buf+(blk*16)) )
         return 0;
@@ -289,6 +319,24 @@ byte readMifare(ISO14443 & card) {
   } 
   return 0;
 }
+
+void init_Ethernet() {
+  byte mac[] = { 
+    0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED       };
+  if ( EEPROM.read(0) == 0x9e && EEPROM.read(1) ) {
+    for(int i = 0; i < 6; i++) {
+      mac[i] = EEPROM.read(2+i);
+    }
+  }
+  IPAddress ip(192,168,1, 177);
+  IPAddress gateway(192,168,1, 1);
+  IPAddress subnet(255, 255, 0, 0);
+  Ethernet.begin(mac, ip, gateway, subnet);
+}
+
+
+
+
 
 
 

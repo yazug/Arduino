@@ -129,7 +129,7 @@ public:
 class W5100Class {
 
 public:
-  void init();
+  void init(const byte cs = SS);
 
   /**
    * @brief	This function is being used for copy the data form Receive buffer of the chip to application buffer.
@@ -193,33 +193,33 @@ public:
   // W5100 Registers
   // ---------------
 private:
-  static uint8_t write(uint16_t _addr, uint8_t _data);
-  static uint16_t write(uint16_t addr, const uint8_t *buf, uint16_t len);
-  static uint8_t read(uint16_t addr);
-  static uint16_t read(uint16_t addr, uint8_t *buf, uint16_t len);
+  uint8_t write(uint16_t _addr, uint8_t _data);
+  uint16_t write(uint16_t addr, const uint8_t *buf, uint16_t len);
+  uint8_t read(uint16_t addr);
+  uint16_t read(uint16_t addr, uint8_t *buf, uint16_t len);
   
 #define __GP_REGISTER8(name, address)             \
-  static inline void write##name(uint8_t _data) { \
-    write(address, _data);                        \
+  inline void write##name(uint8_t _data) { \
+	write(address, _data);                        \
   }                                               \
-  static inline uint8_t read##name() {            \
+  inline uint8_t read##name() {            \
     return read(address);                         \
   }
 #define __GP_REGISTER16(name, address)            \
-  static void write##name(uint16_t _data) {       \
+  void write##name(uint16_t _data) {       \
     write(address,   _data >> 8);                 \
     write(address+1, _data & 0xFF);               \
   }                                               \
-  static uint16_t read##name() {                  \
+  uint16_t read##name() {                  \
     uint16_t res = read(address);                 \
     res = (res << 8) + read(address + 1);         \
     return res;                                   \
   }
 #define __GP_REGISTER_N(name, address, size)      \
-  static uint16_t write##name(uint8_t *_buff) {   \
+  uint16_t write##name(uint8_t *_buff) {   \
     return write(address, _buff, size);           \
   }                                               \
-  static uint16_t read##name(uint8_t *_buff) {    \
+  uint16_t read##name(uint8_t *_buff) {    \
     return read(address, _buff, size);            \
   }
 
@@ -248,27 +248,31 @@ public:
   // W5100 Socket registers
   // ----------------------
 private:
-  static inline uint8_t readSn(SOCKET _s, uint16_t _addr);
-  static inline uint8_t writeSn(SOCKET _s, uint16_t _addr, uint8_t _data);
-  static inline uint16_t readSn(SOCKET _s, uint16_t _addr, uint8_t *_buf, uint16_t len);
-  static inline uint16_t writeSn(SOCKET _s, uint16_t _addr, uint8_t *_buf, uint16_t len);
+  //static
+  inline uint8_t readSn(SOCKET _s, uint16_t _addr);
+  //static
+  inline uint8_t writeSn(SOCKET _s, uint16_t _addr, uint8_t _data);
+  //static
+  inline uint16_t readSn(SOCKET _s, uint16_t _addr, uint8_t *_buf, uint16_t len);
+  //static
+  inline uint16_t writeSn(SOCKET _s, uint16_t _addr, uint8_t *_buf, uint16_t len);
 
   static const uint16_t CH_BASE = 0x0400;
   static const uint16_t CH_SIZE = 0x0100;
 
 #define __SOCKET_REGISTER8(name, address)                    \
-  static inline void write##name(SOCKET _s, uint8_t _data) { \
+  inline void write##name(SOCKET _s, uint8_t _data) { \
     writeSn(_s, address, _data);                             \
   }                                                          \
-  static inline uint8_t read##name(SOCKET _s) {              \
+  inline uint8_t read##name(SOCKET _s) {              \
     return readSn(_s, address);                              \
   }
 #define __SOCKET_REGISTER16(name, address)                   \
-  static void write##name(SOCKET _s, uint16_t _data) {       \
+  void write##name(SOCKET _s, uint16_t _data) {       \
     writeSn(_s, address,   _data >> 8);                      \
     writeSn(_s, address+1, _data & 0xFF);                    \
   }                                                          \
-  static uint16_t read##name(SOCKET _s) {                    \
+  uint16_t read##name(SOCKET _s) {                    \
     uint16_t res = readSn(_s, address);                      \
     uint16_t res2 = readSn(_s,address + 1);                  \
     res = res << 8;                                          \
@@ -277,10 +281,10 @@ private:
     return res;                                              \
   }
 #define __SOCKET_REGISTER_N(name, address, size)             \
-  static uint16_t write##name(SOCKET _s, uint8_t *_buff) {   \
+  uint16_t write##name(SOCKET _s, uint8_t *_buff) {   \
     return writeSn(_s, address, _buff, size);                \
   }                                                          \
-  static uint16_t read##name(SOCKET _s, uint8_t *_buff) {    \
+  uint16_t read##name(SOCKET _s, uint8_t *_buff) {    \
     return readSn(_s, address, _buff, size);                 \
   }
   
@@ -342,15 +346,18 @@ private:
   inline static void resetSS()   { PORTB |=  _BV(2); };
 #endif
 */
-  inline static void initSS() { pinMode(SS, OUTPUT); }
-  inline static void setSS() {
+
+  byte pin_CS;
+
+  inline void initSS(const byte cs) { pin_CS = cs; pinMode(pin_CS, OUTPUT); }
+  inline void setSS() {
 	  SPI.setDataMode(SPI_MODE0);
 	  SPI.setBitOrder(MSBFIRST);
 	  SPI.setClockDivider(SPI_CLOCK_DIV4);
-	  digitalWrite(SS, LOW);
+	  digitalWrite(pin_CS, LOW);
   }
-  inline static void resetSS() {
-	  digitalWrite(SS, HIGH);
+  inline void resetSS() {
+	  digitalWrite(pin_CS, HIGH);
   }
 
 };

@@ -23,12 +23,12 @@ W5100Class W5100;
 #define TXBUF_BASE 0x4000
 #define RXBUF_BASE 0x6000
 
-void W5100Class::init(void)
+void W5100Class::init(const byte cs)
 {
   delay(300);
 
 //  SPI.begin();
-  initSS();
+  initSS(cs);
   
   writeMR(1<<RST);
   writeTMSR(0x55);

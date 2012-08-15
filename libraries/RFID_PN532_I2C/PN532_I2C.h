@@ -32,23 +32,23 @@ class PN532 {
 
 	// PN532 Commands
 	static const byte COMMAND_GetFirmwareVersion = (0x02);
-	static const byte COMMAND_SAMConfiguration = (0x14);
+	static const byte COMMAND_GetGeneralStatus   = (0x04);
+	static const byte COMMAND_SAMConfiguration   = (0x14);
+	static const byte COMMAND_PowerDown          = (0x16);
 
-	static const byte COMMAND_InListPassivTarget = (0x4A);
+	static const byte COMMAND_InListPassiveTarget = (0x4A);
 	static const byte COMMAND_InDataExchange = (0x40);
 	static const byte COMMAND_InAutoPoll = (0x60);
 	static const byte COMMAND_InCommunicateThru = (0x42);
 
 #define PN532_COMMAND_DIAGNOSE              (0x00)
 #define PN532_COMMAND_GETFIRMWAREVERSION    (0x02)
-#define PN532_COMMAND_GETGENERALSTATUS      (0x04)
 #define PN532_COMMAND_READREGISTER          (0x06)
-#define PN532_COMMAND_WRITEREGISTER         (0x08)
+	static const byte COMMAND_WriteRegister  	= (0x08);
 #define PN532_COMMAND_READGPIO              (0x0C)
 #define PN532_COMMAND_WRITEGPIO             (0x0E)
 #define PN532_COMMAND_SETSERIALBAUDRATE     (0x10)
 #define PN532_COMMAND_SETPARAMETERS         (0x12)
-#define PN532_COMMAND_POWERDOWN             (0x16)
 #define PN532_COMMAND_RFCONFIGURATION       (0x32)
 #define PN532_COMMAND_RFREGULATIONTEST      (0x58)
 #define PN532_COMMAND_INJUMPFORDEP          (0x56)
@@ -69,13 +69,7 @@ class PN532 {
 #define PN532_COMMAND_TGRESPONSETOINITIATOR (0x90)
 #define PN532_COMMAND_TGGETTARGETSTATUS     (0x8A)
 
-	enum STATUS_CODE {
-		STATUS_CHECKSUMERROR = 0xfa,
-		STATUS_I2CREADY_TIMEOUT,
-		STATUS_WRONG_ACK,
-		STATUS_WRONG_PREAMBLE
-	};
-	static const byte PACKBUFFSIZE = 64;
+	static const byte PACKBUFFSIZE = 80;
 //
 	byte pin_irq; // P70_IRQ
 	byte pin_rst;
@@ -83,7 +77,9 @@ class PN532 {
 	//
 	byte chksum;
 	byte packet[PACKBUFFSIZE];
-	byte lastStatus;
+	//
+	byte last_command;
+	volatile byte comm_status;
 	//
 	struct {
 		byte NFCType;
@@ -103,10 +99,10 @@ class PN532 {
 	}
 
 	void send(byte d);
-	void sendcc(byte *buf, byte n);
+	void sendpacket(byte n);
 	byte receive();
-	byte receive(byte * buf, int n);
-	byte receive(byte * buf);
+	byte receivepacket(int n);
+	byte receivepacket();
 	boolean checkACKframe(long timeout = 1000);
 	byte IRQ_status(void);
 	boolean IRQ_wait(long timeout = 1000);
@@ -134,7 +130,22 @@ public:
 	static const byte FELICA_CMD_WRITEWITHOUTENCRYPTION = 0x08;
 	static const byte FELICA_CMD_REQUESTSYSTEMCODE = 0x0c;
 
-	static void printArray(const byte * a, byte len) {
+	enum STATUS_CODE {
+		IDLE = 0,
+		COMMAND_ISSUED = 0x01,
+		REQUEST_RECEIVE,
+		ACK_RECEIVED,
+		ACK_FAILED,
+		RESP_COMMAND_MISSMATCH,
+		RESP_RECEIVED,
+		CHECKSUMERROR = 0xfa,
+		I2CREADY_TIMEOUT,
+		WRONG_ACK,
+		WRONG_PREAMBLE,
+		WRONG_POSTAMBLE
+	};
+
+	static void printHexString(const byte * a, byte len) {
 		for (int i = 0; i < len; i++) {
 			Serial.print(a[i] >> 4 & 0x0f, HEX);
 			Serial.print(a[i] & 0x0f, HEX);
@@ -151,17 +162,22 @@ public:
 		init();
 	}
 
-	unsigned long getFirmwareVersion();
-	boolean SAMConfiguration(byte mode = 0x01, byte timeout = 0x14,
-			byte use_irq = 0x01);
+	const byte communicationStatus() { return comm_status; }
+
+	boolean GetFirmwareVersion();
+	boolean GetGeneralStatus();
+	boolean SAMConfiguration(byte mode = 0x01, byte timeout = 0x14, byte use_irq =
+			0x01);
+	boolean PowerDown(byte wkup, byte genirq = 0x01);
+	boolean WriteRegister(word addr, byte value);
+	inline boolean set_default_PowerDown() {
+		return WriteRegister(0x02fc, 0x02);
+	}
 
 	static const byte BaudrateType_106kbitTypeA = 0x00;
 	static const byte BaudrateType_212kbitFeliCa = 0x01;
 	static const byte BaudrateType_424kbitFeliCa = 0x02;
 	static const byte BaudrateType_106kbitTypeB = 0x03;
-	byte InListPassiveTarget(const byte maxtg, const byte brty,
-			const byte initlen = 0, byte * data = NULL, const long & wmillis =
-					100);
 
 	static const byte Type_GenericPassiveTypeA = 0x00;
 	static const byte Type_GenericPassive212kbFeliCa = 0x01;
@@ -172,46 +188,33 @@ public:
 	static const byte Type_FeliCa424kb = 0x12;
 	static const byte Type_Empty = 0xff;
 
-	byte InListPassiveTarget(const byte maxtg, const byte brty, byte * data,
-			const byte initlen, const long & wmillis = 100);
+	byte InListPassiveTarget(const byte maxtg, const byte brty, byte * data, const byte initlen);
 	byte InAutoPoll(const byte pollnr, const byte per, const byte * types,
 			const byte typeslen);
-
-	inline byte autoPoll(const byte polltypes[], byte * resp,
-			const long & waitmillis = 500) {
-		if (InAutoPoll(2, 1, polltypes + 1, polltypes[0])
-				&& getCommandResponse(PN532::COMMAND_InAutoPoll, resp,
-						waitmillis)) {
-			return resp[0];
-		}
-		return 0;
-	}
 
 	byte InDataExchange(const byte Tg, const byte * data, const byte length);
 //	byte InDataExchange(const byte Tg, const byte fcmd, const byte * data, const byte len);
 	byte InDataExchange(const byte Tg, const byte micmd, const byte blkaddr,
 			const byte * data, const byte datalen);
 
-	byte getCommandResponse(const byte, byte * resp, const long & waitmillis =
-			1000);
-	byte listPassiveTarget(byte * data, const byte brty =
-			BaudrateType_106kbitTypeA, const word syscode = 0xffff);
+	byte getCommandResponse(byte * resp, const long & wait = 1000);
 
 	byte getListPassiveTarget(byte * data) {
-		byte count = getCommandResponse(COMMAND_InListPassivTarget, packet);
-		if ( !count )
+		byte count = getCommandResponse(packet);
+		if (!count)
 			return 0;
-	//	count -= 2; // remove checksum and postamble bytes.
+		//	count -= 2; // remove checksum and postamble bytes.
 		memcpy(data, packet, count);
 		return packet[0];
 	}
 
-	void setUID(const byte * uid, const byte uidLen, const byte cardtype = Type_Mifare);
+	void setUID(const byte * uid, const byte uidLen, const byte cardtype =
+			Type_Mifare);
 
 	byte mifare_AuthenticateBlock(word blockNumber, const byte * keyData);
 	byte mifare_ReadDataBlock(uint8_t blockNumber, uint8_t * data);
 
-	byte InCommunicateThru(const byte * data, const byte len);
+	boolean InCommunicateThru(const byte * data, const byte len);
 	byte getCommunicateThruResponse(byte * data);
 
 	//	byte felica_DataExchange(const byte cmd, const byte * data, const byte len);

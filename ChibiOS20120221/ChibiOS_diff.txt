@@ -1,0 +1,93 @@
+diff -br originalFiles/board.c editedFiles/board.c
+30d29
+< 
+62d60
+< 
+66,67c64
+< CH_IRQ_HANDLER(TIMER0_COMP_vect) {
+< 
+---
+> CH_IRQ_HANDLER(TIMER0_COMPA_vect) {
+73d69
+< 
+76,77c72
+< 
+< /**
+---
+> /*
+81,93d75
+< 
+<   /*
+<    * External interrupts setup, all disabled initially.
+<    */
+<   EICRA  = 0x00;
+<   EICRB  = 0x00;
+<   EIMSK  = 0x00;
+< 
+<   /*
+<    * Enables Idle mode for SLEEP instruction.
+<    */
+<   MCUCR  = (1 << SE);
+< 
+97,103c79,80
+<   TCCR0  = (1 << WGM01) | (0 << WGM00) |                /* CTC mode.        */
+<            (0 << COM01) | (0 << COM00) |                /* OC0A disabled.   */
+<            (1 << CS02)  | (0 << CS01)  | (0 << CS00);   /* CLK/64 clock.    */
+<   OCR0   = F_CPU / 64 / CH_FREQUENCY - 1;
+<   TCNT0  = 0;                                           /* Reset counter.   */
+<   TIFR   = (1 << OCF0);                                 /* Reset pending.   */
+<   TIMSK  = (1 << OCIE0);                                /* IRQ on compare.  */
+---
+>   OCR0A = 128;
+>   TIMSK0  |= (1 << OCIE0A);                               /* IRQ on compare.  */
+diff -br originalFiles/chconf.h editedFiles/chconf.h
+55c55
+< #define CH_FREQUENCY                    1000
+---
+> #define CH_FREQUENCY                    (F_CPU/16384L)
+299c299
+< #define CH_USE_MEMCORE                  TRUE
+---
+> #define CH_USE_MEMCORE                  FALSE
+431c431
+< #define CH_DBG_FILL_THREADS             FALSE
+---
+> #define CH_DBG_FILL_THREADS             TRUE
+diff -br originalFiles/chcore.h editedFiles/chcore.h
+106a107,109
+> #ifdef __AVR_3_BYTE_PC__
+>   uint8_t       pcx;
+> #endif  // __AVR_3_BYTE_PC__
+128a132
+> #ifndef CH_CURRP_REGISTER_CACHE
+130a135
+> #endif
+136a142,144
+> #ifdef __AVR_3_BYTE_PC__
+>   uint8_t       pcx;
+> #endif  // __AVR_3_BYTE_PC__
+155a164,176
+> #ifdef __AVR_3_BYTE_PC__
+> #define SETUP_CONTEXT(workspace, wsize, pf, arg) {                      \
+>   tp->p_ctx.sp = (struct intctx*)((uint8_t *)workspace + wsize  -       \
+>                                   sizeof(struct intctx));               \
+>   tp->p_ctx.sp->r2  = (int)pf;                                          \
+>   tp->p_ctx.sp->r3  = (int)pf >> 8;                                     \
+>   tp->p_ctx.sp->r4  = (int)arg;                                         \
+>   tp->p_ctx.sp->r5  = (int)arg >> 8;                                    \
+>   tp->p_ctx.sp->pcx = 0;                                                \
+>   tp->p_ctx.sp->pcl = (int)_port_thread_start >> 8;                     \
+>   tp->p_ctx.sp->pch = (int)_port_thread_start;                          \
+> }
+> #else  // __AVR_3_BYTE_PC__
+166a188
+> #endif  // __AVR_3_BYTE_PC__
+diff -br originalFiles/halconf.h editedFiles/halconf.h
+55c55
+< #define HAL_USE_PAL                 TRUE
+---
+> #define HAL_USE_PAL                 FALSE
+139c139
+< #define HAL_USE_SERIAL              TRUE
+---
+> #define HAL_USE_SERIAL              FALSE

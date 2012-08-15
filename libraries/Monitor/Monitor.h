@@ -10,6 +10,7 @@
 
 #include <Arduino.h>
 #include <Stream.h>
+// stdlib.h is included in Arduino.h
 
 const char endl = '\n';
 
@@ -26,7 +27,6 @@ class Monitor : public Stream {
 public:
     virtual size_t write(uint8_t b) { return stream.write(b); }
     using Print::write;
-    using Print::print;
 
     virtual int available() { return stream.available(); }
     virtual int read() { return stream.read(); }
@@ -36,51 +36,18 @@ public:
 	Monitor(Stream & s) : stream(s) {
 	}
 
-
-
-	void printHex(byte * a, const int length) {
-		for (int i = 0; i < length; i++) {
-			print(*a>>4, HEX);
-			print(*a&0x0f, HEX);
-			print(' ');
-			a++;
-		}
-		return;
+	using Print::print;
+	size_t print(const byte b) {
+		print(b>>4, HEX);
+		print(b & 0x0f);
+		return 2;
 	}
 
-	void printHex(const char * s, const int length) {
-		for (int i = 0; i < length; i++) {
-			if (isprint(s[i]))
-				print(s[i]);
-			else {
-				print("$");
-				print((byte)s[i], HEX);
-			}
-		}
-		return;
-	}
+	void printHex(byte * a, const int length);
+	void printHex(const char * s, const int length);
+	void printHex(const word * a, const int length);
 
-	void printHex(const word * a, const int length) {
-		for (int i = 0; i < length; i++) {
-			print(a[i]>>12, HEX);
-			print(a[i]>>8&0x0f, HEX);
-			print(a[i]>>4&0x0f, HEX);
-			print(a[i]&0x0f, HEX);
-			print(' ');
-		}
-		return;
-	}
-/*
-	const char * printHex(const byte b) {
-		sprintf(sbuf, "%02X", b);
-		return sbuf;
-	}
-
-	const char * printHex(const word w) {
-		sprintf(sbuf, "%04X", w);
-		return sbuf;
-	}
-	*/
+	word readToken(char buf[], long timeout = 200);
 };
 
 #endif /* MONITOR_H_ */

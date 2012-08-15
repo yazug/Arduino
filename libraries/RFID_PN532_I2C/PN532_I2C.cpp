@@ -14,27 +14,33 @@
 //#define FELICADEBUG
 
 PN532::PN532(byte addr, byte irq, byte rst) :
-		i2c_addr(addr), pin_irq(irq), pin_rst(rst), lastStatus(0), chksum(0) {
-	pinMode(pin_irq, INPUT);
-	if (pin_rst != 0xff)
+		i2c_addr(addr), pin_irq(irq), pin_rst(rst) {
+	if (pin_irq != 0xff) {
+		pinMode(pin_irq, INPUT);
+		digitalWrite(pin_irq, HIGH); // pull-up
+	}
+	if (pin_rst != 0xff) {
 		pinMode(pin_rst, OUTPUT);
+		digitalWrite(pin_rst, HIGH);
+	}
+	chksum = 0;
+	comm_status = IDLE;
+	last_command = IDLE;
 	target.IDLength = 0;
 }
 
 void PN532::init() {
-	chksum = 0;
-	lastStatus = 0;
-	target.IDLength = 0;
 	// Reset the PN532
-	if (pin_irq != 0xff) {
-		digitalWrite(pin_irq, HIGH);
-	}
 	if (pin_rst != 0xff) {
-		digitalWrite(pin_rst, HIGH);
 		digitalWrite(pin_rst, LOW);
-		delay(400);
+		delay(50);
 		digitalWrite(pin_rst, HIGH);
+		delay(150);
 	}
+	chksum = 0;
+	comm_status = IDLE;
+	last_command = IDLE;
+	target.IDLength = 0;
 }
 
 inline void PN532::send(byte d) {
@@ -42,7 +48,8 @@ inline void PN532::send(byte d) {
 	chksum += d;
 }
 
-void PN532::sendcc(byte d[], byte len) {
+void PN532::sendpacket(byte len) {
+	byte * p = packet;
 	chksum = 0;
 	Wire.beginTransmission(i2c_addr);
 	// clk is streched by PN532 to make a pause to resume from power-down
@@ -53,7 +60,7 @@ void PN532::sendcc(byte d[], byte len) {
 	send(~(len + 1) + 1); // LCS, 1-Packet Length Check Sum
 	send(HOSTTOPN532); // D4
 	for (; len > 0; len--) {
-		send(*d++);
+		send(*p++);
 	}
 	wirewrite(~chksum);
 	wirewrite(POSTAMBLE);
@@ -68,11 +75,12 @@ boolean PN532::checkACKframe(long timeout) {
 	// read acknowledgement
 	byte pn532ack[] = { PREAMBLE, STARTCODE_1, STARTCODE_2, 0x00, 0xFF,
 			POSTAMBLE };
-	receive(packet, 6);
+	receivepacket(6);
 	if (0 != strncmp((char *) packet, (char *) pn532ack, 6)) {
-		lastStatus = STATUS_WRONG_ACK;
+		comm_status = WRONG_ACK;
 		return false;
 	}
+	comm_status = ACK_RECEIVED;
 	return true; // ack'd command
 }
 
@@ -82,23 +90,44 @@ inline byte PN532::receive() {
 	return d;
 }
 
-byte PN532::receive(byte *buff, int n) {
+byte PN532::receivepacket(int n) {
+	byte * p = packet;
 	chksum = 0;
 	byte i;
+	byte len;
 	Wire.requestFrom((int) i2c_addr, (int) n);
 	receive();
 	for (i = 0; i < n; i++) {
 		// delayMicroseconds(500);
-		*buff++ = receive();
+		*p++ = receive();
 	}
+	// check sum
 	if (chksum != 0) {
-		lastStatus = STATUS_CHECKSUMERROR;
+		comm_status = CHECKSUMERROR;
 		return 0;
 	}
-	return i;
+	// preamble
+	if (memcmp(packet, "\x00\x00\xff", 3) != 0
+			|| ((packet[3] + packet[4]) & 0xff != 0)) {
+#ifdef PN532DEBUG
+		Serial.println("received illigale preamble.");
+#endif
+		comm_status = WRONG_PREAMBLE;
+		return 0;
+	}
+	len = packet[3];
+	// postamble
+	if (packet[6 + len] != 0) {
+#ifdef PN532DEBUG
+		Serial.println("termination 0x00 error");
+#endif
+		return 0;
+	}
+	memcpy(packet, packet+5, len);
+	return len;
 }
 
-byte PN532::receive(byte * buff) {
+byte PN532::receivepacket() {
 	chksum = 0;
 	byte i;
 	byte n = 0;
@@ -108,9 +137,18 @@ byte PN532::receive(byte * buff) {
 	for (i = 0; i < 6; i++) {
 		packet[i] = receive();
 	}
+	// preamble
+	if (memcmp(packet, "\x00\x00\xff", 3) != 0
+			|| ((packet[3] + packet[4]) & 0xff != 0)) {
+#ifdef PN532DEBUG
+		Serial.println("received illigale preamble.");
+#endif
+		comm_status = WRONG_PREAMBLE;
+		return 0;
+	}
 	n = packet[3];
 	if (((packet[3] + packet[4]) & 0xff) != 0x00) {
-		lastStatus = STATUS_WRONG_PREAMBLE;
+		comm_status = WRONG_PREAMBLE;
 		return 0;
 	}
 //	Wire.requestFrom((int) i2c_addr, (int) n);
@@ -118,7 +156,7 @@ byte PN532::receive(byte * buff) {
 		packet[i] = receive();
 	}
 #ifdef PN532DEBUG
-	Serial.print("Len = ");
+	Serial.print("recieve packet Len = ");
 	Serial.print(n, DEC);
 	Serial.print(", ");
 	printHexString(packet, n + 7);
@@ -128,12 +166,20 @@ byte PN532::receive(byte * buff) {
 	Serial.println();
 #endif
 	if (chksum != 0) {
-		lastStatus = STATUS_CHECKSUMERROR;
+		comm_status = CHECKSUMERROR;
 #ifdef PN532DEBUG
 		Serial.println("!!! Checksum error !!!");
 		return 0;
 #endif
 	}
+	if (packet[6 + n] != 0) {
+#ifdef PN532DEBUG
+		Serial.println("termination 0x00 error");
+#endif
+		comm_status = WRONG_POSTAMBLE;
+		return 0;
+	}
+	memcpy(packet, packet+5, n);
 	return n;
 }
 
@@ -149,52 +195,45 @@ boolean PN532::IRQ_wait(long timeout) {
 	// Wait for chip to say its ready!
 	while (digitalRead(pin_irq) == HIGH) {
 		if (timeout < millis()) {
-			lastStatus = STATUS_I2CREADY_TIMEOUT;
+			comm_status = I2CREADY_TIMEOUT;
 			return false;
 		}
-		delay(5);
+		delayMicroseconds(500);
 	}
+	comm_status = REQUEST_RECEIVE;
 	return true;
 }
 
-unsigned long PN532::getFirmwareVersion() {
-	unsigned long response;
-
+boolean PN532::GetFirmwareVersion() {
 	packet[0] = COMMAND_GetFirmwareVersion;
-	sendcc(packet, 1);
+	sendpacket(1);
+	last_command = COMMAND_GetFirmwareVersion;
+	comm_status = COMMAND_ISSUED;
 	if (!checkACKframe()) {
 #ifdef PN532DEBUG
 		Serial.println("Failed to receive ACKframe");
 #endif
+		comm_status = ACK_FAILED;
 		return 0;
 	}
-	// read data packet
-	if (!IRQ_wait())
-		return 0;
-	receive(packet, 6 + 6 + 2); // preamble, d5+(cc+1)+data, checksum, postamble
-#ifdef PN532DEBUG
-			Serial.println("getFirmwareVersion ");
-			PN532::printHexString(packet, 14);
-			Serial.println(".");
-#endif
-	byte pre_sart[] = { PREAMBLE, STARTCODE_1, STARTCODE_2 };
-	if (memcmp(packet, pre_sart, 3) != 0)
-		return 0;
-	if ((packet[3] + packet[4]) & 0xff != 0)
-		return 0;
-#ifdef PN532DEBUG
-	Serial.println("PREAMBLE PASSED.");
-#endif
+	comm_status = ACK_RECEIVED;
+	return 1;
+}
 
-	if (packet[5] != 0xD5 || packet[6] != (COMMAND_GetFirmwareVersion + 1)) {
+boolean PN532::GetGeneralStatus() {
+	packet[0] = COMMAND_GetGeneralStatus;
+	sendpacket(1);
+	last_command = COMMAND_GetGeneralStatus;
+	comm_status = COMMAND_ISSUED;
+	if (!checkACKframe()) {
 #ifdef PN532DEBUG
-		Serial.println("Firmware doesn't match!");
+		Serial.println("Failed to receive ACKframe");
 #endif
+		comm_status = ACK_FAILED;
 		return 0;
 	}
-
-	response = *((unsigned long *) &(packet[7]));
-	return response;
+	comm_status = ACK_RECEIVED;
+	return 1;
 }
 
 boolean PN532::SAMConfiguration(byte mode, byte timeout, byte use_irq) {
@@ -203,45 +242,63 @@ boolean PN532::SAMConfiguration(byte mode, byte timeout, byte use_irq) {
 	packet[2] = timeout; //0x14; // timeout 50ms * 20 = 1 second
 	packet[3] = use_irq; //0x01; // use IRQ pin!
 
-	sendcc(packet, 4);
+	sendpacket( 4);
+	last_command = COMMAND_SAMConfiguration;
+	comm_status = COMMAND_ISSUED;
 	if (!checkACKframe()) {
 #ifdef PN532DEBUG
 		Serial.println("SAMConfiguration ACK missed.");
 #endif
+		comm_status = ACK_FAILED;
 		return false;
 	}
-	// read data packet
-	if (!IRQ_wait())
-		return false;
-	receive(packet, 6 + 2 + 2);
-#ifdef PN532DEBUG
-	Serial.print("SAMConfig response: ");
-	printHexString(packet, 8);
-	Serial.println();
-#endif
-	return (packet[6] == COMMAND_SAMConfiguration + 1);
+	comm_status = ACK_RECEIVED;
+	return true;
 }
 
-byte PN532::InListPassiveTarget(const byte maxtg, const byte brty,
-		const byte length, byte * data, const long & waitmillis) {
+boolean PN532::PowerDown(byte wkup, byte genirq) {
+	byte len = 2;
+	packet[0] = COMMAND_PowerDown;
+	packet[1] = wkup & ~(1<<2);
+	if ( genirq == 1 ) {
+		packet[2] = genirq;
+		len = 3;
+	}
+	sendpacket(len);
+	last_command = COMMAND_PowerDown;
+	comm_status = COMMAND_ISSUED;
+	if (!checkACKframe()) {
+		comm_status = ACK_FAILED;
+		return false;
+	}
+	comm_status = ACK_RECEIVED;
+	return true;
+}
+
+byte PN532::InListPassiveTarget(const byte maxtg, const byte brty, byte * data, const byte length) {
 //	byte inidatalen = 0;
-	packet[0] = COMMAND_InListPassivTarget;
+	packet[0] = COMMAND_InListPassiveTarget;
 	packet[1] = maxtg; // max 1 cards at once (we can set this to 2 later)
 	packet[2] = brty;
 	if (length > 0) {
 		memcpy(packet + 3, data, length);
 	}
 #ifdef PN532DEBUG
-	Serial.print("Send in InListPassiveTarget: ");
+	Serial.print("InListPassiveTarget << ");
 	printHexString(packet, length + 3);
 	Serial.println();
 #endif
-	sendcc(packet, 3 + length);
-	if (!checkACKframe())
+	sendpacket(3 + length);
+	last_command = COMMAND_InListPassiveTarget;
+	comm_status = COMMAND_ISSUED;
+	if (!checkACKframe()) {
+		comm_status = ACK_FAILED;
 		return 0;
+	}
 #ifdef PN532DEBUG
 	Serial.println("ACKed.");
 #endif
+	comm_status = ACK_RECEIVED;
 	return 1;
 }
 
@@ -258,59 +315,40 @@ byte PN532::InAutoPoll(const byte pollnr, const byte period, const byte * types,
 	printHexString(packet, typeslen + 3);
 	Serial.println();
 #endif
-	sendcc(packet, 3 + N);
+	last_command = COMMAND_InAutoPoll;
+	sendpacket(3 + N);
+	comm_status = COMMAND_ISSUED;
 	if (!checkACKframe())
 		return 0;
-
+	comm_status = ACK_RECEIVED;
 #ifdef PN532DEBUG
 	Serial.println("InAutoPoll ACKed.");
 #endif
 	return 1;
 }
 
-byte PN532::getCommandResponse(const byte cmd, byte * resp,
-		const long & wmillis) {
+byte PN532::getCommandResponse(byte * resp, const long & wmillis) {
 	if (!IRQ_wait(wmillis))
 		return 0;
-	byte count = receive(packet);
-//#define PN532DEBUG
+
+	comm_status = REQUEST_RECEIVE;
+	byte count = receivepacket();
 #ifdef PN532COMM
-	Serial.print(">> ");
-	printHexString(packet, count + 7);
+	Serial.print("com resp. >> ");
+	printHexString(packet, count);
 	Serial.println();
 #endif
 //#undef PN532DEBUG
-	if (count == 0)
-		return 0;
-	if (memcmp(packet, "\x00\x00\xff", 3) != 0
-			|| ((packet[3] + packet[4]) & 0xff != 0)) {
+	if (!(packet[0] == 0xd5 && packet[1] == (last_command + 1))) {
 #ifdef PN532DEBUG
-		Serial.println("getCommandResponse illigale preamble.");
+		Serial.println("Missmatch with the last command.");
 #endif
+		comm_status = RESP_COMMAND_MISSMATCH;
 		return 0;
 	}
-	if (!(packet[5] == 0xd5 && packet[6] == (cmd + 1)))
-		return 0;
-//	Serial.println("getCommandResponse d5 ok.");
-#ifdef PN532DEBUG
-	byte xsum = packet[5 + count];
-	Serial.print("xsum in data = ");
-	Serial.println(xsum, HEX);
-#endif
-	// checksum is checked in receive.
-	if (packet[6 + count] != 0) {
-#ifdef PN532DEBUG
-		Serial.println("termination 0x00 error");
-#endif
-		return 0;
-	}
-#ifdef PN532DEBUG
-	Serial.print(packet[6 + count], HEX);
-	Serial.println(" getCommandResponse postamble ok.");
-#endif
-
+	comm_status = RESP_RECEIVED;
 	count -= 2;
-	memcpy(resp, packet + 7, count);
+	memcpy(resp, packet + 2, count);
 	return count;
 }
 
@@ -329,29 +367,6 @@ byte PN532::getCommandResponse(const byte cmd, byte * resp,
  }
  */
 
-byte PN532::listPassiveTarget(byte * data, const byte brty,
-		const word syscode) {
-	byte length = 0;
-	switch (brty) {
-	case BaudrateType_212kbitFeliCa:
-	case BaudrateType_424kbitFeliCa:
-		length = 5;
-		memset(data, 0, length);
-		data[1] = syscode & 0xff;  // System Code is in Little-endian.
-		data[2] = syscode >> 8;
-		break;
-	default:
-		break;
-	}
-	if (!InListPassiveTarget(1, brty, length, data, 50)) {
-#ifdef PN532DEBUG
-		Serial.println("InListPassiveTarget ACK failed. ");
-#endif
-		return 0;
-	}
-	return 1;
-}
-
 
 byte PN532::InDataExchange(const byte Tg, const byte * data,
 		const byte length) {
@@ -365,10 +380,14 @@ byte PN532::InDataExchange(const byte Tg, const byte * data,
 	printHexString(packet, length + 2);
 	Serial.println();
 #endif
-	sendcc(packet, length + 2);
+	sendpacket(length + 2);
+	comm_status = COMMAND_ISSUED;
+	last_command = COMMAND_InDataExchange;
 	if (!(checkACKframe())) {
+		comm_status = ACK_FAILED;
 		return 0;
 	}
+	comm_status = ACK_RECEIVED;
 	return 1;
 }
 /*
@@ -409,10 +428,14 @@ byte PN532::InDataExchange(const byte Tg, const byte micmd, const byte blkaddr,
 	printHexString(packet, datalen + 4);
 	Serial.println();
 #endif
-	sendcc(packet, datalen + 4);
+	sendpacket(datalen + 4);
+	comm_status = COMMAND_ISSUED;
+	last_command = COMMAND_InDataExchange;
 	if (!(checkACKframe())) {
+		comm_status = ACK_FAILED;
 		return 0;
 	}
+	comm_status = ACK_RECEIVED;
 	return 1;
 }
 
@@ -454,21 +477,7 @@ byte PN532::mifare_AuthenticateBlock(word blkn, const byte * keyData) {
 		authcmd = MIFARE_CMD_AUTH_B;
 		break;
 	}
-
-	if (InDataExchange(1, authcmd, blkn, tmp, target.IDLength + 6)) {
-		// Read the response packet
-		rescount = getCommandResponse(COMMAND_InDataExchange, packet);
-#ifdef MIFAREDEBUG
-		Serial.print("mifare_auth Response:");
-		printHexString(packet, rescount);
-		Serial.println();
-#endif
-		if (packet[0] == 0) {
-			lastStatus = packet[0];
-			return 1;
-		}
-	}
-	return 0;
+	return InDataExchange(1, authcmd, blkn, tmp, target.IDLength + 6);
 }
 
 byte PN532::mifare_ReadDataBlock(uint8_t blockNumber, uint8_t * data) {
@@ -487,7 +496,7 @@ byte PN532::mifare_ReadDataBlock(uint8_t blockNumber, uint8_t * data) {
 #endif
 	}
 	byte c;
-	if (!(c = getCommandResponse(COMMAND_InDataExchange, packet))) {
+	if (!(c = getCommandResponse(packet))) {
 #ifdef MIFAREDEBUG
 		Serial.println("Unexpected response");
 		printHexString(packet, 26);
@@ -541,7 +550,7 @@ byte PN532::mifare_ReadDataBlock(uint8_t blockNumber, uint8_t * data) {
  }
  */
 
-byte PN532::InCommunicateThru(const byte * data, const byte len) {
+boolean PN532::InCommunicateThru(const byte * data, const byte len) {
 	packet[0] = COMMAND_InCommunicateThru;
 	packet[1] = len + 1;
 	memcpy(packet + 2, data, len);
@@ -556,10 +565,14 @@ byte PN532::InCommunicateThru(const byte * data, const byte len) {
 #endif
 
 	/* Send the command */
-	sendcc(packet, len + 2);
+	sendpacket(len + 2);
+	comm_status = COMMAND_ISSUED;
+	last_command = COMMAND_InCommunicateThru;
 	if (!checkACKframe()) {
+		comm_status = ACK_FAILED;
 		return 0;
 	}
+	comm_status = ACK_RECEIVED;
 	return 1;
 }
 
@@ -587,7 +600,7 @@ byte PN532::getCommunicateThruResponse(byte * data) {
 //	InCommunicateThru(data, len);
 	/* Read the response packet */
 	int count;
-	if (!(count = getCommandResponse(COMMAND_InCommunicateThru, packet))) {
+	if (!(count = getCommandResponse(packet))) {
 		return 0;
 	}
 #ifdef FELICADEBUG
@@ -698,4 +711,21 @@ byte PN532::felica_ReadBlocksWithoutEncryption(byte * resp, const word servcode,
 		}
 	}
 	return blknum;
+}
+
+boolean PN532::WriteRegister(word addr, byte val) {
+	packet[0] = COMMAND_WriteRegister; /* Data Exchange Header */
+	packet[1] = highByte(addr);
+	packet[2] = lowByte(addr);
+	packet[3] = val;
+
+	sendpacket(4);
+	comm_status = COMMAND_ISSUED;
+	last_command = COMMAND_WriteRegister;
+	if (!(checkACKframe())) {
+		comm_status = ACK_FAILED;
+		return 0;
+	}
+	comm_status = ACK_RECEIVED;
+	return 1;
 }

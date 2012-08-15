@@ -1,0 +1,21 @@
+17 Jan 2012
+
+Updated to ChibiOS 2.2.8
+
+set CH_DBG_FILL_THREADS so unused stack could be determined.
+
+Added unused stack size function and example chStackUse.
+
+/**
+ * determine unused stack bytes for a thread
+ *
+ * param[in] wsp pointer to working space for thread
+ * param[in] size working space size
+ *
+ * \return number of unused stack locations
+ */
+size_t chUnusedStack(void *wsp, size_t size);
+
+21 Feb 2012
+
+Updated to Chibios 2.4.0
