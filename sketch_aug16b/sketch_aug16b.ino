@@ -6,33 +6,21 @@ void setup() {
   digitalWrite(3, HIGH);
 }
 
+const byte PD2 = 1<<2;
+
 void loop() {
 long cnt = 0;
 for(;;) {
     asm("nop");
     asm("nop");
+    PORTD |= PD2;
     asm("nop");
     asm("nop");
     asm("nop");
     asm("nop");
+    PORTD &= ~(PD2);
     asm("nop");
     asm("nop");
-    digitalWrite(2, HIGH);
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    digitalWrite(2, LOW);
-    cnt++;
-    if ( cnt & 0x10000 ) {
-      digitalWrite(13, LOW);
-    } else {
-      digitalWrite(13, HIGH);
-    }
   }
 }
 

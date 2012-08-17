@@ -17,7 +17,7 @@
 
 #include "IDCardReader.h"
 
-DS3234 rtc(9);
+DS3234 rtc(8);
 
 #define IRQ   (2)
 #define RESET (7)  // Not connected by default on the NFC Shield
@@ -33,37 +33,42 @@ const byte factory_a[] = {
   0xaa, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
 ISO14443 card;
+ISO14443 tempcard;
+
 byte buf[80];
+
 struct {
   const static int table_size = 8;
   IDLog table[table_size];
-  int index;
-  int count;
+  int startix;
+  int endix;
 
   void init() {
-    index = 0;
-    count = 0;
+    startix = 0;
+    endix = 0;
     for(int i = 0; i < table_size; i++) {
       table[i].date = 0;
       table[i].time = 0;
-      table[i].nfctype = 0;
+      table[i].nfctype = 0xff;
     }
   }
 
   IDLog & last() {
-    return table[index];
+    return table[(endix + (table_size - 1)) % table_size];
   }
 
   IDLog & at(const int i) {
-    return table[(index + 1 + i) % count];
+    return table[(startix + i) % table_size];
   }
 
   void add() {
-    if ( count < table_size )
-      count++;
-    index++;
-    if ( !(index < count ) )
-      index %= count;
+    if ( startix == endix ) {
+      startix = (startix + 1) % table_size;
+      endix = (endix + 1) % table_size;
+    } 
+    else {
+      endix = (endix + 1) % table_size;
+    }  
   }
 
 } 
@@ -92,71 +97,90 @@ void setup() {
   rtc.begin();
   rtc.update();
 
-  card.init();
+  card.clear();
   Serial << "Start." << endl;
 }
 
 
 void loop() {
   byte cnt;
-  ISO14443 tempcard;
 
   if ( millis() > prevPolling + 100 ) {
-    //Serial.println("polling..");
     prevPolling = millis();
-    if ( nfc.InAutoPoll(1, 1, polling+1, polling[0]) 
-      && (cnt = nfc.getCommandResponse(buf)) ) {
-      //  mon.printHex(buf, 8);
-      // mon << endl;
-      // NbTg, type1, length1, [Tg, ...]
-      tempcard.set(buf[1], buf+3);
-      if ( tempcard == card 
-        && millis() > prevDetect + 5000 ) {
-        card.init();
-      }
-      if ( tempcard != card ) { 
-        card.set(tempcard);
-        if ( card.type == 0x11 ) {
-          rtc.update();
-          prevDetect = millis();
-          mon << "FeliCa FCF" << endl;
-          if ( readFCF(card) ) {
-            IDCardData & idcard = (IDCardData&) buf;
-            cardlog.add();
-            cardlog.last().time = rtc.time;
-            cardlog.last().date = rtc.cal;
-            cardlog.last().nfctype = card.type;
-            memcpy(cardlog.last().nfcid, card.IDm, card.IDLength);
-            memcpy(cardlog.last().id, idcard.felica.id, 8);
-            memcpy(buf, idcard.felica.school, 8);
-            buf[8] = 0;
-            cardlog.last().school = strtol((char*)buf, NULL, HEX);
-            cardlog.last().issue = idcard.felica.issue;
-          }
-          mon << "cardlog count = " << cardlog.count << endl;
-        }
-        else if ( card.type == 0x10 ) {
-          rtc.update();
-          prevDetect = millis();
-          if ( readMifare(card) ) {
-            IDCardData & idcard = (IDCardData&) buf;
-            cardlog.add();
-            cardlog.last().time = rtc.time;
-            cardlog.last().date = rtc.cal;
-            cardlog.last().nfctype = card.type;
-            memcpy(cardlog.last().nfcid, card.UID, card.IDLength);
-            memcpy(cardlog.last().id, idcard.mifare.id, 8);
-            cardlog.last().school = 0;
-            cardlog.last().issue = idcard.mifare.issue;
-          }
-          mon << "cardlog count = " << cardlog.count << endl;
-        }
-      } 
+    if ( !nfc.InAutoPoll(1, 1, polling+1, polling[0]) || !(cnt = nfc.getCommandResponse(buf)) ) {
+      mon << "AutoPoll Error ocurred. " << endl;
     } 
     else {
-      mon << "Comm status: ";
-      mon.print(nfc.communicationStatus(), HEX);
-      mon << endl;
+      if ( buf[0] != 0x00 ) {
+        // NbTg, type1, length1, [Tg, ...]
+        tempcard.set(buf[1], buf+3);
+        if ( tempcard != card ) {
+          card.set(tempcard);
+          rtc.update();
+          prevDetect = millis();
+          switch ( card.type ) {
+          case FeliCa212kb:
+            mon << "FeliCa IDm ";
+            mon.printHex(card.IDm, card.IDLength);
+            mon << endl;
+            if ( readFCF(card) ) {
+              cardlog.add();
+              cardlog.last().time = rtc.time;
+              IDCardData & idcard((IDCardData &) buf);
+              memcpy(cardlog.last().id, idcard.felica.id, 8);
+              cardlog.last().nfctype = FeliCa212kb;
+              /*
+             IDCardData & idcard = (IDCardData&) buf;
+               cardlog.add();
+               cardlog.last().time = rtc.time;
+               cardlog.last().date = rtc.cal;
+               cardlog.last().nfctype = card.type;
+               memcpy(cardlog.last().nfcid, card.IDm, card.IDLength);
+               memcpy(cardlog.last().id, idcard.felica.id, 8);
+               memcpy(buf, idcard.felica.school, 8);
+               buf[8] = 0;
+               cardlog.last().school = strtol((char*)buf, NULL, HEX);
+               cardlog.last().issue = idcard.felica.issue;
+               */
+            }
+            /*
+             mon << "cardlog count = " << cardlog.count << endl;
+             */
+            break;
+          case Mifare:
+            mon << "Mifare classic UID/NUID ";
+            mon.printHex(card.UID, card.IDLength);
+            mon << endl;
+            if ( readMifare(card) ) {
+              cardlog.add();
+              cardlog.last().time = rtc.time;
+              IDCardData & idcard((IDCardData &) buf);
+              memcpy(cardlog.last().id, idcard.mifare.id, 8);
+              cardlog.last().nfctype = Mifare;
+              /*
+             IDCardData & idcard = (IDCardData&) buf;
+               cardlog.add();
+               cardlog.last().time = rtc.time;
+               cardlog.last().date = rtc.cal;
+               cardlog.last().nfctype = card.type;
+               memcpy(cardlog.last().nfcid, card.UID, card.IDLength);
+               memcpy(cardlog.last().id, idcard.mifare.id, 8);
+               cardlog.last().school = 0;
+               cardlog.last().issue = idcard.mifare.issue;
+               */
+            }
+            /*
+             mon << "cardlog count = " << cardlog.count << endl;
+             */
+            break;
+          }
+        } 
+        else { // tempcard == card
+          //basically ignores.
+          if ( millis() > prevDetect + 5000 ) 
+            card.clear(); // forget the last detection;
+        }
+      }
     }
   }
 
@@ -181,23 +205,31 @@ void loop() {
           // add a meta refresh tag, so the browser pulls again every 5 seconds:
           rtc.updateTime();
           char tmp[32];
-          client.print(rtc.timeString(tmp));
+          client.print(rtc.time, HEX);
           client.println("<br />");
-          /*
-          for(int cnum = 0; cnum < cardlog.count; cnum++) {
+          for(int cnum = 0; cnum < cardlog.table_size; cnum++) {
+            if ( cardlog.at(cnum).time == 0 && cardlog.at(cnum).nfctype == 0xff )
+              continue;
+            client.print(cardlog.at(cnum).time, HEX);
+            client.print(" ");
+            for(int j = 0; j < 8; j++) {
+              client.print(cardlog.at(cnum).id[j]);
+            }
+            client.println("<br />");
+            /*
            client.print(cardlog.at(cnum).date, HEX);
-           client.println("-");
-           client.print(cardlog.at(cnum).time, HEX);
-           client.println("-");
-           client.print(cardlog.at(cnum).school, HEX);
-           client.println("-");
-           memcpy(tmp, cardlog.at(cnum).id, 8);
-           tmp[8] = 0;
-           client.print((char*) tmp);
-           client.println("-");
-           client.print((char)cardlog.at(cnum).issue);
-           }
-           */
+             client.println("-");
+             client.print(cardlog.at(cnum).time, HEX);
+             client.println("-");
+             client.print(cardlog.at(cnum).school, HEX);
+             client.println("-");
+             memcpy(tmp, cardlog.at(cnum).id, 8);
+             tmp[8] = 0;
+             client.print((char*) tmp);
+             client.println("-");
+             client.print((char)cardlog.at(cnum).issue);
+             */
+          }
           client.println("<br />");
           client.println("</html>");
           break;
@@ -223,7 +255,9 @@ void loop() {
 void send_header(EthernetClient & client) {
   client.println("HTTP/1.1 200 OK");
   client.println("Content-Type: text/html");
-  client.println("Connnection: close");
+  client.println("Keep-Alive: timeout=5, max=10");
+  client.println("Connection: Keep-Alive");
+//  client.println("Connnection: close");
   client.println();
   client.println("<!DOCTYPE HTML>");
 }
@@ -255,7 +289,7 @@ byte readFCF(ISO14443 & ccard) {
   word scode = 0x1a8b; //, 0x170f, 0x1317, 0x1713, 0x090f, 0xffff 
   int snum = 0;
   word blklist[] = { 
-    0,1,2,3               };
+    0,1,2,3                                   };
   //
   word codever = nfc.felica_RequestService(scode);
   if ( codever != 0xffff && scode != 0xffff) {
@@ -315,7 +349,7 @@ byte readMifare(ISO14443 & card) {
 
 void init_Ethernet() {
   byte mac[] = { 
-    0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED       };
+    0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED                           };
   if ( EEPROM.read(0) == 0x9e && EEPROM.read(1) ) {
     for(int i = 0; i < 6; i++) {
       mac[i] = EEPROM.read(2+i);
@@ -326,6 +360,16 @@ void init_Ethernet() {
   IPAddress subnet(255, 255, 0, 0);
   Ethernet.begin(mac, ip, gateway, subnet);
 }
+
+
+
+
+
+
+
+
+
+
 
 
 

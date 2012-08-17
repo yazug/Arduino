@@ -82,7 +82,7 @@ struct ISO14443 {
 	};
 
 	ISO14443() {
-		init();
+		clear();
 	}
 
 	ISO14443(const byte * raw) {
@@ -148,7 +148,7 @@ struct ISO14443 {
 		return buf;
 	}
 
-	void init() {
+	void clear() {
 		type = Type_Empty;
 		IDLength = 0;
 		memset(id, 0, 8);
