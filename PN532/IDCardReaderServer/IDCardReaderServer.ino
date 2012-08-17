@@ -119,6 +119,7 @@ void loop() {
         if ( card.type == 0x11 ) {
           rtc.update();
           prevDetect = millis();
+          mon << "FeliCa FCF" << endl;
           if ( readFCF(card) ) {
             IDCardData & idcard = (IDCardData&) buf;
             cardlog.add();
@@ -242,7 +243,7 @@ void PN532_init() {
   nfc.getCommandResponse(buf);
   if ( nfc.communicationStatus() == PN532::RESP_RECEIVED) {
     Serial << "SAMConfiguration," << endl;
-    nfc.set_default_PowerDown();
+    nfc.CPU_PowerMode(2);
   }
 }
 
@@ -251,20 +252,12 @@ byte readFCF(ISO14443 & ccard) {
   byte c;
   // Polling command, with system code request.
   len = nfc.felica_Polling(buf, 0x00fe);
-  //  mon << "Polling ";
-  //  mon.print((word)0x00fe, HEX); 
-  //  mon << " " ;
   word scode = 0x1a8b; //, 0x170f, 0x1317, 0x1713, 0x090f, 0xffff 
   int snum = 0;
   word blklist[] = { 
     0,1,2,3               };
   //
   word codever = nfc.felica_RequestService(scode);
-  //  mon << "Service code = ";
-  //  mon.print(scode, HEX); 
-  //  mon << ", version = ";
-  //  mon.print(codever, HEX); 
-  //  mon << endl;
   if ( codever != 0xffff && scode != 0xffff) {
     c = nfc.felica_ReadBlocksWithoutEncryption(buf, scode, (byte) 4, blklist);
     if ( c != 0 ) {

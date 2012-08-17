@@ -107,6 +107,9 @@ class PN532 {
 	byte IRQ_status(void);
 	boolean IRQ_wait(long timeout = 1000);
 
+	void send_ack();
+	void send_nack();
+
 //	boolean sendCommand(byte cmd, long timeout = 1000);
 public:
 	static const byte I2C_ADDRESS = (0x48 >> 1);
@@ -134,8 +137,10 @@ public:
 		IDLE = 0,
 		COMMAND_ISSUED = 0x01,
 		REQUEST_RECEIVE,
-		ACK_RECEIVED,
-		ACK_FAILED,
+		ACK_FRAME_RECEIVED,
+		ACK_NOT_RECEIVED,
+		NACK_FRAME_RECEIVED,
+		ERROR_FRAME_RECEIVED,
 		RESP_COMMAND_MISSMATCH,
 		RESP_RECEIVED,
 		CHECKSUMERROR = 0xfa,
@@ -170,9 +175,10 @@ public:
 			0x01);
 	boolean PowerDown(byte wkup, byte genirq = 0x01);
 	boolean WriteRegister(word addr, byte value);
-	inline boolean set_default_PowerDown() {
-		return WriteRegister(0x02fc, 0x02);
+	inline boolean CPU_PowerMode(const byte mode = 0x00) {
+		return WriteRegister(0x02fc, (mode == 0 ? 0x00 : 0x02) ); // p. 12/200, User Manual Rev. 02
 	}
+
 
 	static const byte BaudrateType_106kbitTypeA = 0x00;
 	static const byte BaudrateType_212kbitFeliCa = 0x01;

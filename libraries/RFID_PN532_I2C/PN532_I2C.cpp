@@ -67,21 +67,50 @@ void PN532::sendpacket(byte len) {
 	Wire.endTransmission();
 }
 
+void PN532::send_ack() {
+	Wire.beginTransmission(i2c_addr);
+	// clk is streched by PN532 to make a pause to resume from power-down
+	send(PREAMBLE);
+	send(STARTCODE_1);
+	send(STARTCODE_2);
+	send(0);
+	send(0xff);
+	wirewrite(POSTAMBLE);
+	Wire.endTransmission();
+}
+
+void PN532::send_nack() {
+	Wire.beginTransmission(i2c_addr);
+	// clk is streched by PN532 to make a pause to resume from power-down
+	send(PREAMBLE);
+	send(STARTCODE_1);
+	send(STARTCODE_2);
+	send(0xff);
+	send(0);
+	wirewrite(POSTAMBLE);
+	Wire.endTransmission();
+}
+
 boolean PN532::checkACKframe(long timeout) {
 	// Wait for chip to say its ready!
 	if (!IRQ_wait(timeout))
 		return false;
 
 	// read acknowledgement
-	byte pn532ack[] = { PREAMBLE, STARTCODE_1, STARTCODE_2, 0x00, 0xFF,
-			POSTAMBLE };
+	byte frame_head[] = { PREAMBLE, STARTCODE_1, STARTCODE_2 };
 	receivepacket(6);
-	if (0 != strncmp((char *) packet, (char *) pn532ack, 6)) {
-		comm_status = WRONG_ACK;
-		return false;
+	if ( (0 == memcmp(packet, frame_head, 3))
+			&& (packet[5] == 0) ) {
+		if ( packet[3] == 0x00 && packet[4] == 0xff ) {
+			comm_status = ACK_FRAME_RECEIVED;
+			return true; // ack'd command
+		} else if ( packet[3] == 0xff && packet[4] == 0x00 ) {
+			comm_status = NACK_FRAME_RECEIVED;
+			return true; // ack'd command
+		}
 	}
-	comm_status = ACK_RECEIVED;
-	return true; // ack'd command
+	comm_status = WRONG_ACK;
+	return false;
 }
 
 inline byte PN532::receive() {
@@ -95,7 +124,7 @@ byte PN532::receivepacket(int n) {
 	chksum = 0;
 	byte i;
 	byte len;
-	Wire.requestFrom((int) i2c_addr, (int) n);
+	Wire.requestFrom((int) i2c_addr, (int) n+1);
 	receive();
 	for (i = 0; i < n; i++) {
 		// delayMicroseconds(500);
@@ -213,10 +242,10 @@ boolean PN532::GetFirmwareVersion() {
 #ifdef PN532DEBUG
 		Serial.println("Failed to receive ACKframe");
 #endif
-		comm_status = ACK_FAILED;
+		comm_status = ACK_NOT_RECEIVED;
 		return 0;
 	}
-	comm_status = ACK_RECEIVED;
+	comm_status = ACK_FRAME_RECEIVED;
 	return 1;
 }
 
@@ -229,10 +258,10 @@ boolean PN532::GetGeneralStatus() {
 #ifdef PN532DEBUG
 		Serial.println("Failed to receive ACKframe");
 #endif
-		comm_status = ACK_FAILED;
+		comm_status = ACK_NOT_RECEIVED;
 		return 0;
 	}
-	comm_status = ACK_RECEIVED;
+	comm_status = ACK_FRAME_RECEIVED;
 	return 1;
 }
 
@@ -249,10 +278,10 @@ boolean PN532::SAMConfiguration(byte mode, byte timeout, byte use_irq) {
 #ifdef PN532DEBUG
 		Serial.println("SAMConfiguration ACK missed.");
 #endif
-		comm_status = ACK_FAILED;
+		comm_status = ACK_NOT_RECEIVED;
 		return false;
 	}
-	comm_status = ACK_RECEIVED;
+	comm_status = ACK_FRAME_RECEIVED;
 	return true;
 }
 
@@ -268,10 +297,10 @@ boolean PN532::PowerDown(byte wkup, byte genirq) {
 	last_command = COMMAND_PowerDown;
 	comm_status = COMMAND_ISSUED;
 	if (!checkACKframe()) {
-		comm_status = ACK_FAILED;
+		comm_status = ACK_NOT_RECEIVED;
 		return false;
 	}
-	comm_status = ACK_RECEIVED;
+	comm_status = ACK_FRAME_RECEIVED;
 	return true;
 }
 
@@ -292,13 +321,13 @@ byte PN532::InListPassiveTarget(const byte maxtg, const byte brty, byte * data, 
 	last_command = COMMAND_InListPassiveTarget;
 	comm_status = COMMAND_ISSUED;
 	if (!checkACKframe()) {
-		comm_status = ACK_FAILED;
+		comm_status = ACK_NOT_RECEIVED;
 		return 0;
 	}
 #ifdef PN532DEBUG
 	Serial.println("ACKed.");
 #endif
-	comm_status = ACK_RECEIVED;
+	comm_status = ACK_FRAME_RECEIVED;
 	return 1;
 }
 
@@ -320,7 +349,7 @@ byte PN532::InAutoPoll(const byte pollnr, const byte period, const byte * types,
 	comm_status = COMMAND_ISSUED;
 	if (!checkACKframe())
 		return 0;
-	comm_status = ACK_RECEIVED;
+	comm_status = ACK_FRAME_RECEIVED;
 #ifdef PN532DEBUG
 	Serial.println("InAutoPoll ACKed.");
 #endif
@@ -384,10 +413,10 @@ byte PN532::InDataExchange(const byte Tg, const byte * data,
 	comm_status = COMMAND_ISSUED;
 	last_command = COMMAND_InDataExchange;
 	if (!(checkACKframe())) {
-		comm_status = ACK_FAILED;
+		comm_status = ACK_NOT_RECEIVED;
 		return 0;
 	}
-	comm_status = ACK_RECEIVED;
+	comm_status = ACK_FRAME_RECEIVED;
 	return 1;
 }
 /*
@@ -432,10 +461,10 @@ byte PN532::InDataExchange(const byte Tg, const byte micmd, const byte blkaddr,
 	comm_status = COMMAND_ISSUED;
 	last_command = COMMAND_InDataExchange;
 	if (!(checkACKframe())) {
-		comm_status = ACK_FAILED;
+		comm_status = ACK_NOT_RECEIVED;
 		return 0;
 	}
-	comm_status = ACK_RECEIVED;
+	comm_status = ACK_FRAME_RECEIVED;
 	return 1;
 }
 
@@ -569,10 +598,10 @@ boolean PN532::InCommunicateThru(const byte * data, const byte len) {
 	comm_status = COMMAND_ISSUED;
 	last_command = COMMAND_InCommunicateThru;
 	if (!checkACKframe()) {
-		comm_status = ACK_FAILED;
+		comm_status = ACK_NOT_RECEIVED;
 		return 0;
 	}
-	comm_status = ACK_RECEIVED;
+	comm_status = ACK_FRAME_RECEIVED;
 	return 1;
 }
 
@@ -723,9 +752,9 @@ boolean PN532::WriteRegister(word addr, byte val) {
 	comm_status = COMMAND_ISSUED;
 	last_command = COMMAND_WriteRegister;
 	if (!(checkACKframe())) {
-		comm_status = ACK_FAILED;
+		comm_status = ACK_NOT_RECEIVED;
 		return 0;
 	}
-	comm_status = ACK_RECEIVED;
+	comm_status = ACK_FRAME_RECEIVED;
 	return 1;
 }
