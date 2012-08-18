@@ -8,14 +8,23 @@
 
 #include "Monitor.h"
 
+#include "IDCard.h"
+
 PN532 nfc(PN532::I2C_ADDRESS, 2, 7);
 byte polling[] = { 
   2, TypeF, TypeA };
-enum {
-  IDLE, 
-  POLLING_REQUESTED,
-} nfc_status = IDLE;
 long lastpoll;
+long lastread;
+enum {
+  IDLE,
+  POLLING,
+  RECEIVED_NFCID,
+  AUTHENTICATED,
+  ERROR
+} 
+reader_status = IDLE;
+
+ISO14443 card;
 
 byte mac[] = {  
   0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
@@ -26,8 +35,8 @@ EthernetClient client;
 DS3234 rtc_spi(9);
 long lastrtcupdate;
 
-char buf[128];
-char * bufp;
+byte buf[128];
+byte * bufp;
 
 void setup() {
   // Open serial communications and wait for port to open:
@@ -48,6 +57,8 @@ void setup() {
   nfc.begin();
   PN532_init();
 
+  card.clear();
+
   bufp = buf;
   *bufp = 0;
 }
@@ -58,6 +69,7 @@ void loop() {
   char c;
   byte cnt;
   long current;
+  ISO14443 tmpcard;
 
   if ( millis() > lastrtcupdate + 133 ) {
     current = rtc_spi.time;
@@ -68,24 +80,97 @@ void loop() {
     }
   }
 
-if ( ilde.
-  if ( millis() > lastpoll + 233 ) {
-    if ( nfc_status == IDLE ) {
-    if ( nfc.InAutoPoll(1, 1, polling+1, polling[0]) ) 
-      nfc_status = POLLING_REQUESTED;
-      lastpoll = millis();
-    } else {
-      nfc_status = IDLE;
-      mon << "AutoPoll Error. " << endl;
-    }
-    if ( nfc_status == POLLING_REQUESTED && nfc.IRQ_ready() ) {
-      cnt = nfc.getCommandResponse((byte*) buf);
-      if ( cnt ) {
-        mon.printHex(buf, cnt);
-        mon << endl;
+  if ( reader_status == IDLE ) {
+    if ( card.type != Type_Empty && millis() > lastread + 6000 ) 
+      card.clear();
+    if ( millis() > lastpoll + 101 ) {
+      if ( nfc.InAutoPoll(1, 1, polling+1, polling[0]) ) {
+        lastpoll = millis();
+        // status goes to ACK_FRAME_RECEIVED
+        reader_status = POLLING;
+      }
+      else {
+        mon << "AutoPoll Request Error. " << endl;
+        reader_status = ERROR;
       }
     }
+  } 
+  else if ( reader_status == POLLING && nfc.IRQ_ready() ) {
+    if ( nfc.getCommandResponse((byte*) buf) ) {
+      if ( buf[0] == 1 ) {
+        tmpcard.set(buf[1], buf+3);
+        if ( card != tmpcard ) {
+          card = tmpcard;
+          reader_status = RECEIVED_NFCID;
+          mon << "Card type " << card.type << ", ID "; 
+          mon.printHex(card.id, card.IDLength); 
+          mon << endl;
+        } 
+        else {
+          reader_status = IDLE;
+        }
+      } 
+      else {
+        // No cards.
+        reader_status = IDLE;
+      }
+    } 
   }
+  else if ( reader_status == RECEIVED_NFCID ) {
+    switch(card.type) {
+    case FeliCa212kb:
+      if ( nfc.felica_Polling(buf, 0x00fe) && (cnt = nfc.felica_RequestService(0x1a8b) != 0xffff) ) {
+        mon << "Version of Service Code 0x1a8b " << cnt << endl;
+        reader_status = AUTHENTICATED;
+      }
+      break;
+    case Mifare:
+      nfc.setUID(card.UID, card.IDLength, card.type);
+      if ( nfc.mifare_AuthenticateBlock(4, KawazuKey_b) 
+        && nfc.getCommandResponse(buf) && buf[0] == 0 ) {
+        mon << "Mifare IizukaMagTape compat " << endl;
+        reader_status = AUTHENTICATED;
+      }    
+      break;
+    default:
+      mon << "Card is unknown type" << endl;
+      reader_status = IDLE;
+      break;
+    }
+    lastread = millis();
+    if ( reader_status != AUTHENTICATED ) {
+      mon << "Failed authentication " << endl;
+      reader_status = IDLE;
+    }
+  } 
+  else if ( reader_status == AUTHENTICATED ) {
+    word blklist[] = { 
+      0, 1, 2, 3                 };
+    switch (card.type) {
+    case FeliCa212kb:
+      if ( nfc.felica_ReadBlocksWithoutEncryption(buf, 0x1a8b, (byte) 4, blklist) ) {
+        IDCardData & idcard((IDCardData &) buf);
+        mon << "PIN ";
+        mon.printHex(idcard.felica.pin, 8);
+        mon << " ISSUE " << idcard.felica.issue << endl;
+      }
+      break;
+    case Mifare:
+      if ( nfc.mifare_ReadDataBlock(4, buf) ) {
+        IDCardData & idcard((IDCardData &) buf);
+        mon << "PIN ";
+        mon.printHex(idcard.mifare.pin, 8);
+        mon << " ISSUE " << idcard.mifare.issue << endl;
+      }
+      break;
+    }
+    reader_status = IDLE;
+  }
+  else {
+    // mon << "reader_status = " << (byte) reader_status << endl;
+    reader_status = IDLE;
+  }
+
 
   if ( !client ) {
     if ( client = server.available() ) {
@@ -98,8 +183,8 @@ if ( ilde.
     if (client.connected()) {
       if (client.available()) {
         Monitor cmon(client);
-        if ( cmon.readLine(bufp) ) {
-          if ( strcmp("MAC", buf) == 0 ) {
+        if ( cmon.readLine((char*)bufp) ) {
+          if ( strcmp("MAC", (char*)buf) == 0 ) {
             cmon << ">> " << "MAC ";
             cmon.printHex(mac, 6);
             cmon << endl;
@@ -109,7 +194,7 @@ if ( ilde.
             *bufp = 0;
           } 
           else 
-            if ( strcmp("TIME", buf) == 0 ) {
+            if ( strcmp("TIME", (char*)buf) == 0 ) {
             cmon << ">> " << "TIME ";
             rtc_spi.printCalendarOn(cmon);
             cmon << " - ";
@@ -121,7 +206,7 @@ if ( ilde.
             *bufp = 0;
           }
           else 
-            if ( strcmp("QUIT", buf) == 0 ) {
+            if ( strcmp("QUIT", (char*)buf) == 0 ) {
             cmon << ">> " << "bye bye." << endl;
             delay(5);
             client.stop();
@@ -131,7 +216,7 @@ if ( ilde.
             *bufp = 0;
           } 
           else {
-            cmon << ">>" << buf << endl;
+            cmon << ">>" << (char*)buf << endl;
             //
             bufp = buf;
             *bufp = 0;
@@ -164,7 +249,7 @@ boolean PN532_init() {
     return false;
   } 
   Serial << "PN53x IC ver. " << (char)buf[0] << ", Firmware ver. " 
-    << buf[1] << '.' << buf[2] << endl;
+    << (byte) buf[1] << '.' << (byte) buf[2] << endl;
 
   if ( nfc.SAMConfiguration() && nfc.getCommandResponse((byte*)buf) 
     && nfc.status() == PN532::RESP_RECEIVED) {
@@ -172,9 +257,19 @@ boolean PN532_init() {
   }
   nfc.CPU_PowerMode(2);
   nfc.getCommandResponse((byte*)buf);
-  nfc_status = IDLE;
+  reader_status = IDLE;
   return true;
 }
+
+
+
+
+
+
+
+
+
+
 
 
 

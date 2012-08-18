@@ -166,6 +166,8 @@ public:
 		WRONG_POSTAMBLE
 	};
 	const byte status() { return comm_status; }
+	byte status(const byte b) { return (comm_status = b); }
+	const byte command() { return last_command; }
 	boolean IRQ_ready(void);
 
 	boolean GetFirmwareVersion();

@@ -28,49 +28,6 @@ static const word FELICA_SERVICE_SUICA = 0x090F;
 static const word FELICA_SERVICE_EDY = 0x170F;
 static const word FELICA_SERVICE_FCF = 0x1a8b;
 
-/*
- char kana[][4] = {
- "xx", "xx", "xx", "xx", "xx", "xx", "wo", "xa",
- "xi", "xu", "xe", "xo", "ya", "yu", "yo", "xtu",
- "-", "A", "I", "U", "E", "O", "KA", "KI",
- "KU", "KE", "KO", "SA", "SHI", "SU", "SE", "SO",
- "aaa", "bbb", "ccc", "ddd", "eee", "NA", "NI", "NU",
- "NE", "NO", "HA", "HI", "FU", "HE", "HO", "MA",
- "MI", "MU", "ME", "MO", "YA", "YU", "YO", "RA",
- "RI", "RU", "RE", "RO", "WA", "NN", "\"", "o",
- };
- */
-
-union IDCardData {
-	struct FCF {
-		enum GENDER {
-			UNKNOWN = 0, MALE = 1, FEMALE = 2
-		};
-		static const long KyushuInstOfTech = 40010071;
-		word division;
-		char id[12];
-		char issue;
-		char gender;
-		//
-		char kana[16];
-		char school[8];
-		char dateofissue[8];
-		char goodthru[8];
-		byte pmcontrol[8];
-	} felica;
-	struct IizukaMagTape {
-		word division;
-		char id[8];
-		char issue;
-		char res0[5];
-		word kanji[8];
-		char dayofbirth[7];
-		char gender;
-		char dateofissue[7];
-		char res1[1];
-	} mifare;
-};
-
 struct ISO14443 {
 	static const byte NFCID_size = 8;
 	//

@@ -37,13 +37,12 @@ public:
 	}
 
 	using Print::print;
-	size_t print(const byte b) {
-		print(b>>4, HEX);
-		print(b & 0x0f);
-		return 2;
+
+	void printHex(const byte b) {
+		printHex(&b, 1);
 	}
 
-	void printHex(byte * a, const int length);
+	void printHex(const byte * a, const int length);
 	void printHex(const char * s, const int length);
 	void printHex(const word * a, const int length);
 

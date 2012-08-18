@@ -7,7 +7,7 @@
 
 #include "Monitor.h"
 
-void Monitor::printHex(byte * a, const int length) {
+void Monitor::printHex(const byte * a, const int length) {
 	for (int i = 0; i < length; i++) {
 		print(*a >> 4, HEX);
 		print(*a & 0x0f, HEX);
