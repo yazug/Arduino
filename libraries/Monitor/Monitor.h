@@ -48,6 +48,7 @@ public:
 	void printHex(const word * a, const int length);
 
 	word readToken(char buf[], long timeout = 200);
+	boolean readLine(char buf[], long wait = 10);
 };
 
 #endif /* MONITOR_H_ */

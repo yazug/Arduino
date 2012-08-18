@@ -1,19 +1,30 @@
 #include <SPI.h>
 #include <EEPROM.h>
 #include "Ethernet.h"
+#include "DS3234.h"
+#include "Wire.h"
+#include "PN532_I2C.h"
+#include "ISO14443.h"
 
 #include "Monitor.h"
 
-Monitor mon(Serial);
-EthernetClient client;
-boolean clientIsConnected;
+PN532 nfc(PN532::I2C_ADDRESS, 2, 7);
+byte polling[] = { 
+  2, TypeF, TypeA };
+enum {
+  IDLE, 
+  POLLING_REQUESTED,
+} nfc_status = IDLE;
+long lastpoll;
 
-// Initialize the Ethernet server library
-// with the IP address and port you want to use 
-// (port 80 is default for HTTP):
 byte mac[] = {  
   0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 EthernetServer server(1234);
+Monitor mon(Serial);
+EthernetClient client;
+
+DS3234 rtc_spi(9);
+long lastrtcupdate;
 
 char buf[128];
 char * bufp;
@@ -27,26 +38,57 @@ void setup() {
   //  }
 
   SPI.begin();
+  rtc_spi.begin();
   // start the Ethernet connection and the server:
   init_Ethernet();
-  //
   server.begin();
-  
+  mon << "server is at " << Ethernet.localIP() << endl;
+
+  Wire.begin();
+  nfc.begin();
+  PN532_init();
+
   bufp = buf;
   *bufp = 0;
-
-  mon << "server is at " << Ethernet.localIP() << endl;
-  clientIsConnected = false;
 }
 
 
 void loop() {
   // listen for incoming clients
   char c;
+  byte cnt;
+  long current;
+
+  if ( millis() > lastrtcupdate + 133 ) {
+    current = rtc_spi.time;
+    rtc_spi.update();
+    if ( current != rtc_spi.time ) {
+      rtc_spi.printTimeOn(mon);
+      mon << endl;
+    }
+  }
+
+if ( ilde.
+  if ( millis() > lastpoll + 233 ) {
+    if ( nfc_status == IDLE ) {
+    if ( nfc.InAutoPoll(1, 1, polling+1, polling[0]) ) 
+      nfc_status = POLLING_REQUESTED;
+      lastpoll = millis();
+    } else {
+      nfc_status = IDLE;
+      mon << "AutoPoll Error. " << endl;
+    }
+    if ( nfc_status == POLLING_REQUESTED && nfc.IRQ_ready() ) {
+      cnt = nfc.getCommandResponse((byte*) buf);
+      if ( cnt ) {
+        mon.printHex(buf, cnt);
+        mon << endl;
+      }
+    }
+  }
 
   if ( !client ) {
     if ( client = server.available() ) {
-      clientIsConnected = true;
       mon << "new client opened." << endl;
     }
   } 
@@ -68,7 +110,11 @@ void loop() {
           } 
           else 
             if ( strcmp("TIME", buf) == 0 ) {
-            cmon << ">> " << "TIME " << millis() << endl;
+            cmon << ">> " << "TIME ";
+            rtc_spi.printCalendarOn(cmon);
+            cmon << " - ";
+            rtc_spi.printTimeOn(cmon);
+            cmon << endl;
             mon << "TIME command. " << endl;
             //
             bufp = buf;
@@ -80,12 +126,13 @@ void loop() {
             delay(5);
             client.stop();
             mon << "disonnected client." << endl;
-             //
+            //
             bufp = buf;
             *bufp = 0;
-          } else {
+          } 
+          else {
             cmon << ">>" << buf << endl;
-             //
+            //
             bufp = buf;
             *bufp = 0;
           }
@@ -106,6 +153,27 @@ void init_Ethernet() {
   IPAddress gateway(192,168,1, 1);
   IPAddress subnet(255, 255, 0, 0);
   Ethernet.begin(mac, ip, gateway, subnet);
+}
+
+boolean PN532_init() {
+  byte cnt = 0;
+  for (int i = 0; i < 3  && !( nfc.GetFirmwareVersion() && (cnt = nfc.getCommandResponse((byte*)buf)) ); i++) 
+    delay(500);
+  if (! cnt ) {
+    Serial << "Couldn't find PN53x on Wire." << endl;
+    return false;
+  } 
+  Serial << "PN53x IC ver. " << (char)buf[0] << ", Firmware ver. " 
+    << buf[1] << '.' << buf[2] << endl;
+
+  if ( nfc.SAMConfiguration() && nfc.getCommandResponse((byte*)buf) 
+    && nfc.status() == PN532::RESP_RECEIVED) {
+    Serial << "SAMConfiguration," << endl;
+  }
+  nfc.CPU_PowerMode(2);
+  nfc.getCommandResponse((byte*)buf);
+  nfc_status = IDLE;
+  return true;
 }
 
 

@@ -31,6 +31,7 @@ void setup() {
     Serial.println();
   } 
   else {
+    Serial.println("Not found PN532.");
     while (1);
   }
   if ( nfc.SAMConfiguration() && (cnt = nfc.getCommandResponse(respbuff)) ) {

@@ -91,14 +91,27 @@ public:
 	static long JD2000(const long & yymmdd);
 
 
-	char * timeString(char * buf) {
-		sprintf(buf, "%02lx:%02lx:%02lx", time>>16 & BITS_HR, time>>8 & BITS_MIN, time & BITS_SEC);
-		return buf;
+	size_t printTimeOn(Print & pr) {
+		pr.print((time >> 16 & BITS_HR)>>4 & 0x0f, HEX);
+		pr.print((time >> 16 & BITS_HR) & 0x0f, HEX);
+		pr.print(':');
+		pr.print((time >> 8 & BITS_MIN)>>4 & 0x0f, HEX);
+		pr.print((time >> 8 & BITS_MIN)& 0x0f, HEX);
+		pr.print(':');
+		pr.print((time & BITS_SEC) >> 4 & 0x0f, HEX);
+		pr.print((time & BITS_SEC) & 0x0f, HEX);
+		return 8;
 	}
 
-	char * calendarString(char * buf) {
-		sprintf(buf, "20%02lx-%02lx-%02lx", cal>>16&BITS_YR, cal>>8&BITS_MTH, cal &BITS_DATE);
-		return buf;
+	size_t printCalendarOn(Print & pr) {
+		pr.print(0x2000 + (cal >> 16 & BITS_YR), HEX);
+		pr.print('/');
+		pr.print((cal >> 8 & BITS_MTH)>>4 & 0x0f, HEX);
+		pr.print((cal >> 8 & BITS_MTH)& 0x0f, HEX);
+		pr.print('/');
+		pr.print((cal & BITS_DATE)>>4&0x0f, HEX);
+		pr.print((cal & BITS_DATE)&0x0f, HEX);
+		return 10;
 	}
 
 	static char * copyNameOfDay(char * buf, byte d) {

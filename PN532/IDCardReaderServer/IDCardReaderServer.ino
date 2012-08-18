@@ -1,5 +1,5 @@
 /*
-  modified example in libraries Web Server
+  modified example in librarwies Web Server
  
  Circuit:
  * Ethernet shield attached to pins 10, 11, 12, 13
@@ -17,7 +17,7 @@
 
 #include "IDCardReader.h"
 
-DS3234 rtc(8);
+DS3234 rtc(9);
 
 #define IRQ   (2)
 #define RESET (7)  // Not connected by default on the NFC Shield

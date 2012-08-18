@@ -73,3 +73,24 @@ word Monitor::readToken(char buf[], long timeout) {
 	buf[bp] = 0;
 	return bp;
 }
+
+boolean Monitor::readLine(char buf[], long wait) {
+	long msec = millis();
+	int bp = 0;
+	byte c = 0;
+	boolean lineEnded = false;
+
+	buf[bp] = 0;
+	while (available() && (c = read())) {
+		if (iscntrl(c) && bp != 0 ) {
+			lineEnded = true;
+		} else {
+			msec = millis();
+			buf[bp++] = c;
+		}
+		if ( lineEnded || (millis() > wait + msec) )
+			break;
+	}
+	buf[bp] = 0;
+	return lineEnded;
+}

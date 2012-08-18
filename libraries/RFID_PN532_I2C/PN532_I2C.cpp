@@ -8,10 +8,10 @@
 #include <Wire.h>
 #include "PN532_I2C.h"
 
-//#define PN532DEBUG
-//#define MIFAREDEBUG
-//#define PN532COMM
-//#define FELICADEBUG
+#define PN532DEBUG
+#define MIFAREDEBUG
+#define PN532COMM
+#define FELICADEBUG
 
 PN532::PN532(byte addr, byte irq, byte rst) :
 		i2c_addr(addr), pin_irq(irq), pin_rst(rst) {
@@ -44,6 +44,9 @@ void PN532::init() {
 }
 
 inline void PN532::send(byte d) {
+//	Serial.print('_');
+//	Serial.print(d, HEX);
+//	Serial.print(' ');
 	wirewrite(d);
 	chksum += d;
 }
@@ -99,6 +102,7 @@ boolean PN532::checkACKframe(long timeout) {
 	// read acknowledgement
 	byte frame_head[] = { PREAMBLE, STARTCODE_1, STARTCODE_2 };
 	receivepacket(6);
+	//printHexString(packet, 6);
 	if ( (0 == memcmp(packet, frame_head, 3))
 			&& (packet[5] == 0) ) {
 		if ( packet[3] == 0x00 && packet[4] == 0xff ) {
@@ -212,19 +216,26 @@ byte PN532::receivepacket() {
 	return n;
 }
 
-byte PN532::IRQ_status(void) {
-	if (digitalRead(pin_irq) == HIGH)
-		return I2C_BUSY;
-	else
-		return I2C_READY;
+boolean PN532::IRQ_ready(void) {
+	return (digitalRead(pin_irq) == HIGH) && (pin_irq != 0xff);
 }
 
 boolean PN532::IRQ_wait(long timeout) {
+//	Serial.println(timeout);
 	timeout += millis();
 	// Wait for chip to say its ready!
+	if (pin_irq == 0xff) {
+		return false;
+	}
 	while (digitalRead(pin_irq) == HIGH) {
 		if (timeout < millis()) {
 			comm_status = I2CREADY_TIMEOUT;
+			/*
+			Serial.print("timeout ");
+			Serial.print(timeout);
+			Serial.print(", millis ");
+			Serial.println(millis());
+			*/
 			return false;
 		}
 		delayMicroseconds(500);

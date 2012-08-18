@@ -17,12 +17,12 @@
 #include <Wire.h>
 
 class PN532 {
-
+/*
 	static const byte I2C_READBIT = (0x01);
 	static const byte I2C_BUSY = (0x00);
 	static const byte I2C_READY = (0x01);
 	static const byte I2C_READYTIMEOUT = (20);
-
+*/
 	static const byte PREAMBLE = (0x00);
 	static const byte STARTCODE_1 = (0x00);
 	static const byte STARTCODE_2 = (0xFF);
@@ -104,7 +104,6 @@ class PN532 {
 	byte receivepacket(int n);
 	byte receivepacket();
 	boolean checkACKframe(long timeout = 1000);
-	byte IRQ_status(void);
 	boolean IRQ_wait(long timeout = 1000);
 
 	void send_ack();
@@ -133,23 +132,6 @@ public:
 	static const byte FELICA_CMD_WRITEWITHOUTENCRYPTION = 0x08;
 	static const byte FELICA_CMD_REQUESTSYSTEMCODE = 0x0c;
 
-	enum STATUS_CODE {
-		IDLE = 0,
-		COMMAND_ISSUED = 0x01,
-		REQUEST_RECEIVE,
-		ACK_FRAME_RECEIVED,
-		ACK_NOT_RECEIVED,
-		NACK_FRAME_RECEIVED,
-		ERROR_FRAME_RECEIVED,
-		RESP_COMMAND_MISSMATCH,
-		RESP_RECEIVED,
-		CHECKSUMERROR = 0xfa,
-		I2CREADY_TIMEOUT,
-		WRONG_ACK,
-		WRONG_PREAMBLE,
-		WRONG_POSTAMBLE
-	};
-
 	static void printHexString(const byte * a, byte len) {
 		for (int i = 0; i < len; i++) {
 			Serial.print(a[i] >> 4 & 0x0f, HEX);
@@ -167,7 +149,24 @@ public:
 		init();
 	}
 
-	const byte communicationStatus() { return comm_status; }
+	enum STATUS_CODE {
+		IDLE = 0,
+		COMMAND_ISSUED = 0x01,
+		REQUEST_RECEIVE,
+		ACK_FRAME_RECEIVED,
+		ACK_NOT_RECEIVED,
+		NACK_FRAME_RECEIVED,
+		ERROR_FRAME_RECEIVED,
+		RESP_COMMAND_MISSMATCH,
+		RESP_RECEIVED,
+		CHECKSUMERROR = 0xfa,
+		I2CREADY_TIMEOUT,
+		WRONG_ACK,
+		WRONG_PREAMBLE,
+		WRONG_POSTAMBLE
+	};
+	const byte status() { return comm_status; }
+	boolean IRQ_ready(void);
 
 	boolean GetFirmwareVersion();
 	boolean GetGeneralStatus();

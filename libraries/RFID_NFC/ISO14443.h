@@ -8,6 +8,8 @@
 #ifndef ISO14443_H_
 #define ISO14443_H_
 
+#include <Print.h>
+
 //#include "PN532_I2C.h"
 static const byte TypeA = 0x00;
 static const byte TypeF = 0x01;
@@ -70,7 +72,7 @@ union IDCardData {
 };
 
 struct ISO14443 {
-	static const byte IDdata_size = 8;
+	static const byte NFCID_size = 8;
 	//
 	byte type;
 	byte IDLength;
@@ -78,7 +80,7 @@ struct ISO14443 {
 		byte UID[7];
 		byte NUID[7];
 		byte IDm[8];
-		byte id[IDdata_size];
+		byte id[NFCID_size];
 	};
 
 	ISO14443() {
@@ -133,19 +135,21 @@ struct ISO14443 {
 		}
 	}
 
-	const char * typeString(char * buf, const byte ttype) {
-		switch (ttype) {
+	size_t printOn(Print & pr) {
+		switch(type) {
 		case Mifare:
-			strcpy(buf, "Mifare");
+			return pr.print("Mifare");
 			break;
 		case FeliCa212kb:
-			strcpy(buf, "FeliCa212kb");
+			return pr.print("FeliCa212kb");
 			break;
 		case FeliCa424kb:
-			strcpy(buf, "FeliCa424kb");
+			return pr.print("FeliCa424kb");
 			break;
+		case Type_Empty:
+			return pr.print("Empty");
 		}
-		return buf;
+		return pr.print("Unknown");
 	}
 
 	void clear() {
