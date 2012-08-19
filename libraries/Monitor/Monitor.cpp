@@ -9,12 +9,11 @@
 
 void Monitor::printHex(const byte * a, const int length, const char gap) {
 	for (int i = 0; i < length; ) {
-		print(*a >> 4, HEX);
-		print(*a & 0x0f, HEX);
+		print(a[i]>>4, HEX);
+		print(a[i]&0x0f, HEX);
 		i++;
 		if ( gap && i < length)
 			print(gap);
-		a++;
 	}
 	return;
 }
@@ -36,10 +35,8 @@ void Monitor::printHex(const char * s, const int length, const char gap) {
 
 void Monitor::printHex(const word * a, const int length, const char gap) {
 	for (int i = 0; i < length; ) {
-		print(a[i] >> 12, HEX);
-		print(a[i] >> 8 & 0x0f, HEX);
-		print(a[i] >> 4 & 0x0f, HEX);
-		print(a[i] & 0x0f, HEX);
+		printHex(a[i]>>8);
+		printHex(a[i]);
 		i++;
 		if ( gap && i < length)
 			print(gap);

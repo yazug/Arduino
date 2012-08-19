@@ -248,8 +248,7 @@ void loop() {
 
           case 0x5453494C: // LIST
             for(int i = 0; i < cardlog.count(); i++) {
-              cmon.printHex(i);
-              cmon << " ";
+              cmon << i << " ";
               cmon.print(cardlog[i].date, HEX);
               cmon << " ";
               cmon.print(cardlog[i].time, HEX);

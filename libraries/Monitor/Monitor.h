@@ -39,7 +39,8 @@ public:
 	using Print::print;
 
 	void printHex(const byte b) {
-		printHex(&b, 1);
+		write('0'+(b>>4));
+		write('0'+(b&0x0f));
 	}
 
 	void printHex(const byte * a, const int length, char gap = ' ');
