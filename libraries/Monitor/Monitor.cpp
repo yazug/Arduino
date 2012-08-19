@@ -7,35 +7,42 @@
 
 #include "Monitor.h"
 
-void Monitor::printHex(const byte * a, const int length) {
-	for (int i = 0; i < length; i++) {
+void Monitor::printHex(const byte * a, const int length, const char gap) {
+	for (int i = 0; i < length; ) {
 		print(*a >> 4, HEX);
 		print(*a & 0x0f, HEX);
-		print(' ');
+		i++;
+		if ( gap && i < length)
+			print(gap);
 		a++;
 	}
 	return;
 }
 
-void Monitor::printHex(const char * s, const int length) {
-	for (int i = 0; i < length; i++) {
+void Monitor::printHex(const char * s, const int length, const char gap) {
+	for (int i = 0; i < length; ) {
 		if (isprint(s[i]))
 			print(s[i]);
 		else {
 			print("$");
 			print((byte) s[i], HEX);
 		}
+		i++;
+		if ( gap && i < length)
+			print(gap);
 	}
 	return;
 }
 
-void Monitor::printHex(const word * a, const int length) {
-	for (int i = 0; i < length; i++) {
+void Monitor::printHex(const word * a, const int length, const char gap) {
+	for (int i = 0; i < length; ) {
 		print(a[i] >> 12, HEX);
 		print(a[i] >> 8 & 0x0f, HEX);
 		print(a[i] >> 4 & 0x0f, HEX);
 		print(a[i] & 0x0f, HEX);
-		print(' ');
+		i++;
+		if ( gap && i < length)
+			print(gap);
 	}
 	return;
 }
@@ -74,14 +81,27 @@ word Monitor::readToken(char buf[], long timeout) {
 	return bp;
 }
 
-boolean Monitor::readLine(char buf[], long wait) {
+int Monitor::ithToken(const char buf[], const int item, int & fromix) {
+    int tc, tend;
+    for(tc = 0, tend = 0; buf[fromix] ; tc++) {
+      for (fromix = tend; buf[fromix] ; fromix++)
+        if ( !isspace(buf[fromix]) ) break;
+      for (tend = fromix; buf[tend] ; tend++)
+        if ( isspace(buf[tend]) ) break;
+      if ( item == tc )
+    	  break;
+    }
+    return tend - fromix;
+}
+
+boolean Monitor::readLine(char buf[], int maxlen, long wait) {
 	long msec = millis();
 	int bp = 0;
 	byte c = 0;
 	boolean lineEnded = false;
 
 	buf[bp] = 0;
-	while (available() && (c = read())) {
+	while (available() && (c = read()) && bp < maxlen) {
 		if (iscntrl(c) && bp != 0 ) {
 			lineEnded = true;
 		} else {
@@ -94,3 +114,4 @@ boolean Monitor::readLine(char buf[], long wait) {
 	buf[bp] = 0;
 	return lineEnded;
 }
+

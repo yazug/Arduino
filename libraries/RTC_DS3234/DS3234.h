@@ -81,7 +81,9 @@ public:
 	byte * transfer(byte reg, byte * buf, int num);
 
 	void setCalendar(const long & yymmdd);
+	inline void setCalendar() { setCalendar(cal); }
 	void setTime(const long & hhmmdd);
+	inline void setTime() { setTime(time); }
 	void updateTime();
 	void updateCalendar();
 	void update() {

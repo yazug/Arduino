@@ -13,7 +13,7 @@
 #include <inttypes.h>
 #if ARDUINO >= 100
 #include "Arduino.h"
-#include "SoftwareSerial.h"
+#include <SoftwareSerial.h>
 #else
 #include "WProgram.h"
 #include "NewSoftSerial.h"

@@ -8,7 +8,7 @@
 #ifndef ISO14443_H_
 #define ISO14443_H_
 
-#include <Print.h>
+//#include <Print.h>
 
 //#include "PN532_I2C.h"
 static const byte TypeA = 0x00;
@@ -37,7 +37,7 @@ struct ISO14443 {
 		byte UID[7];
 		byte NUID[7];
 		byte IDm[8];
-		byte id[NFCID_size];
+		byte ID[NFCID_size];
 	};
 
 	ISO14443() {
@@ -70,9 +70,15 @@ struct ISO14443 {
 		return *this;
 	}
 
-	void set(const byte tid, const byte * raw) {
+	void set(const byte tp, const byte *data, const byte len) {
+		type = tp;
+		IDLength = len;
+		memcpy(ID, data, len);
+	}
+
+	void set(const byte tp, const byte * raw) {
 		//PN532::printHexString(raw, 16);
-		type = tid;
+		type = tp;
 		byte len;
 		switch (type) {
 		case FeliCa212kb:
@@ -93,31 +99,42 @@ struct ISO14443 {
 	}
 
 	size_t printOn(Print & pr) {
+		int cnt = 0;
 		switch(type) {
 		case Mifare:
-			return pr.print("Mifare");
+			cnt += pr.print("Mifare");
 			break;
 		case FeliCa212kb:
-			return pr.print("FeliCa212kb");
+			cnt += pr.print("FeliCa212kb");
 			break;
 		case FeliCa424kb:
-			return pr.print("FeliCa424kb");
+			cnt += pr.print("FeliCa424kb");
 			break;
 		case Type_Empty:
-			return pr.print("Empty");
+			cnt += pr.print("Empty");
+			break;
+		default:
+			cnt += pr.print("Unknown");
+			break;
 		}
-		return pr.print("Unknown");
+		for(int i = 0; i < IDLength; i++) {
+			pr.print(' ');
+			pr.print(ID[i]>>4, HEX);
+			pr.print(ID[i]&0x0f, HEX);
+			cnt += 3;
+		}
+		return cnt;
 	}
 
 	void clear() {
 		type = Type_Empty;
 		IDLength = 0;
-		memset(id, 0, 8);
+		memset(ID, 0, 8);
 	}
 
 	const boolean operator==(const ISO14443 & c) const {
 		if (type == c.type && IDLength == c.IDLength) {
-			return memcmp(id, c.id, IDLength) == 0;
+			return memcmp(ID, c.ID, IDLength) == 0;
 		}
 		return false;
 	}

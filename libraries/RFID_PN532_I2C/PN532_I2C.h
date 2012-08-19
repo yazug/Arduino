@@ -81,14 +81,6 @@ class PN532 {
 	byte last_command;
 	volatile byte comm_status;
 	//
-	struct {
-		byte NFCType;
-		byte IDLength;
-		union {
-			byte IDm[8];
-			byte UID[7];
-		};
-	} target;
 
 	inline void wirewrite(const byte & d) {
 		Wire.write(d);
@@ -111,6 +103,16 @@ class PN532 {
 
 //	boolean sendCommand(byte cmd, long timeout = 1000);
 public:
+
+	struct TargetID {
+		byte NFCType;
+		byte IDLength;
+		union {
+			byte IDm[8];
+			byte UID[7];
+		};
+	} target;
+
 	static const byte I2C_ADDRESS = (0x48 >> 1);
 
 	// Mifare Commands
@@ -198,6 +200,7 @@ public:
 	byte InListPassiveTarget(const byte maxtg, const byte brty, byte * data, const byte initlen);
 	byte InAutoPoll(const byte pollnr, const byte per, const byte * types,
 			const byte typeslen);
+	const byte getAutoPollResponse(byte * respo);
 
 	byte InDataExchange(const byte Tg, const byte * data, const byte length);
 //	byte InDataExchange(const byte Tg, const byte fcmd, const byte * data, const byte len);
@@ -215,8 +218,8 @@ public:
 		return packet[0];
 	}
 
-	void setUID(const byte * uid, const byte uidLen, const byte cardtype =
-			Type_Mifare);
+	void targetSet(const byte cardtype, const byte * uid, const byte uidLen);
+	void targetClear();
 
 	byte mifare_AuthenticateBlock(word blockNumber, const byte * keyData);
 	byte mifare_ReadDataBlock(uint8_t blockNumber, uint8_t * data);
@@ -236,7 +239,6 @@ public:
 			const byte blknum, const word blklist[]);
 	byte felica_ReadBlocksWithoutEncryption(byte * resp, const word servcode,
 			const byte blknum, const word blklist[]);
-
 };
 
 #endif /* PN532_I2C_H_ */

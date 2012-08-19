@@ -9,7 +9,6 @@
 #include "Monitor.h"
 
 #include "IDCard.h"
-#include "queue.h"
 
 PN532 nfc(PN532::I2C_ADDRESS, 2, 7);
 byte polling[] = { 
@@ -26,22 +25,18 @@ enum {
 reader_status = IDLE;
 
 ISO14443 card;
-Queue cardlog;
 
 byte mac[] = {  
   0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 EthernetServer server(1234);
 Monitor mon(Serial);
 EthernetClient client;
-long client_idle_since = 0;
 
 DS3234 rtc_spi(9);
 long lastrtcupdate;
 
 byte buf[128];
 byte * bufp;
-
-long stwatch;
 
 void setup() {
   // Open serial communications and wait for port to open:
@@ -63,7 +58,6 @@ void setup() {
   PN532_init();
 
   card.clear();
-  cardlog.init();
 
   bufp = buf;
   *bufp = 0;
@@ -75,92 +69,83 @@ void loop() {
   char c;
   byte cnt;
   long current;
-  int pos, len;
-  word blklist[] = { 
-    0, 
-    1, 
-    2, 
-    3
-  };
+  ISO14443 tmpcard;
 
   if ( millis() > lastrtcupdate + 133 ) {
     current = rtc_spi.time;
     rtc_spi.update();
     if ( current != rtc_spi.time ) {
       rtc_spi.printTimeOn(mon);
-      mon << " ";
-      rtc_spi.printCalendarOn(mon);
       mon << endl;
     }
   }
 
-  stwatch = millis();
-  switch(reader_status) {
-  case IDLE:
-    if (millis() < lastpoll + 101 ) 
-      break;
-    if ( card.type != Type_Empty && millis() > lastread + 5000 )
+  if ( reader_status == IDLE ) {
+    if ( card.type != Type_Empty && millis() > lastread + 6000 ) 
       card.clear();
-    if ( nfc.InAutoPoll(1, 1, polling+1, polling[0]) ) {
-      lastpoll = millis();
-      reader_status = POLLING;
+    if ( millis() > lastpoll + 101 ) {
+      if ( nfc.InAutoPoll(1, 1, polling+1, polling[0]) ) {
+        lastpoll = millis();
+        // status goes to ACK_FRAME_RECEIVED
+        reader_status = POLLING;
+      }
+      else {
+        mon << "AutoPoll Request Error. " << endl;
+        reader_status = ERROR;
+      }
     }
-    else {
-      reader_status = ERROR;
-    }
-    break;
-
-  case POLLING:
-    if ( !nfc.IRQ_ready() ) 
-      break;
-    cnt = nfc.getAutoPollResponse((byte*) buf);
-    if ( nfc.status() != nfc.RESP_RECEIVED ) {
-      reader_status = ERROR;
-      break;
-    }
-    if ( cnt == 0 ) {
-      reader_status = IDLE;
-      break;
-    }
-    if (card.type == nfc.target.NFCType 
-      && memcmp(card.ID, nfc.target.IDm, nfc.target.IDLength) == 0 ) {
-      //mon << "hey" << endl;
-      reader_status = IDLE;
-      lastpoll = millis() + 1000;
-      break;
-    }
-    reader_status = RECEIVED_NFCID;
-    card.set(nfc.target.NFCType, nfc.target.IDm, nfc.target.IDLength);
-    card.printOn(mon);
-    mon << endl;
-    break;
-
-  case RECEIVED_NFCID:
-    switch(nfc.target.NFCType) {
+  } 
+  else if ( reader_status == POLLING && nfc.IRQ_ready() ) {
+    if ( nfc.getCommandResponse((byte*) buf) ) {
+      if ( buf[0] == 1 ) {
+        tmpcard.set(buf[1], buf+3);
+        if ( card != tmpcard ) {
+          card = tmpcard;
+          reader_status = RECEIVED_NFCID;
+          mon << "Card type " << card.type << ", ID "; 
+          mon.printHex(card.id, card.IDLength); 
+          mon << endl;
+        } 
+        else {
+          reader_status = IDLE;
+        }
+      } 
+      else {
+        // No cards.
+        reader_status = IDLE;
+      }
+    } 
+  }
+  else if ( reader_status == RECEIVED_NFCID ) {
+    switch(card.type) {
     case FeliCa212kb:
       if ( nfc.felica_Polling(buf, 0x00fe) && (cnt = nfc.felica_RequestService(0x1a8b) != 0xffff) ) {
-        mon << "authenticaterd." << endl;
+        mon << "Version of Service Code 0x1a8b " << cnt << endl;
         reader_status = AUTHENTICATED;
       }
       break;
     case Mifare:
+      nfc.setUID(card.UID, card.IDLength, card.type);
       if ( nfc.mifare_AuthenticateBlock(4, KawazuKey_b) 
         && nfc.getCommandResponse(buf) && buf[0] == 0 ) {
-        mon << "authenticaterd." << endl;
+        mon << "Mifare IizukaMagTape compat " << endl;
         reader_status = AUTHENTICATED;
       }    
       break;
     default:
       mon << "Card is unknown type" << endl;
+      reader_status = IDLE;
       break;
     }
+    lastread = millis();
     if ( reader_status != AUTHENTICATED ) {
       mon << "Failed authentication " << endl;
       reader_status = IDLE;
     }
-    break;
-
-  case AUTHENTICATED:
+  } 
+  else if ( reader_status == AUTHENTICATED ) {
+    word blklist[] = { 
+      0, 1, 2, 3                 };
     switch (card.type) {
     case FeliCa212kb:
       if ( nfc.felica_ReadBlocksWithoutEncryption(buf, 0x1a8b, (byte) 4, blklist) ) {
@@ -168,8 +153,6 @@ void loop() {
         mon << "PIN ";
         mon.printHex(idcard.felica.pin, 8);
         mon << " ISSUE " << idcard.felica.issue << endl;
-        cardlog.add(rtc_spi.cal, rtc_spi.time, card.type, card.IDm, idcard.felica.pin);
-        mon << cardlog.count() << endl;
       }
       break;
     case Mifare:
@@ -178,48 +161,40 @@ void loop() {
         mon << "PIN ";
         mon.printHex(idcard.mifare.pin, 8);
         mon << " ISSUE " << idcard.mifare.issue << endl;
-        cardlog.add(rtc_spi.cal, rtc_spi.time, card.type, card.UID, idcard.felica.pin);
-        mon << cardlog.count() << endl;
       }
       break;
     }
-    lastread = millis();
     reader_status = IDLE;
-    break;
-  default:
+  }
+  else {
     // mon << "reader_status = " << (byte) reader_status << endl;
     reader_status = IDLE;
-    break;
   }
-  stwatch = millis() - stwatch;
-  if ( stwatch > 250 )
-    mon << "Task > 250 msec " << stwatch << " millis to " << (byte) reader_status << endl;
 
 
   if ( !client ) {
     if ( client = server.available() ) {
-      client_idle_since = millis();
-      mon << "A New client started." << endl;
+      mon << "new client opened." << endl;
     }
   } 
-  else if ( millis() < client_idle_since + 30000L  ) {
+  else if ( client ) {
     // an http request ends with a blank line
     boolean currentLineIsBlank = true;
     if (client.connected()) {
       if (client.available()) {
         Monitor cmon(client);
-        if ( cmon.readLine((char*)bufp, 127) ) {
-          for(int i = 0; buf[i] ; i++) 
-            buf[i] = toupper(buf[i]);
-          switch( *((long*)buf) ) {
-          case 0x52444441: //ADDR
-            cmon << ">> " << "ADDR ";
+        if ( cmon.readLine((char*)bufp) ) {
+          if ( strcmp("MAC", (char*)buf) == 0 ) {
+            cmon << ">> " << "MAC ";
             cmon.printHex(mac, 6);
             cmon << endl;
             mon << "MAC command. " << endl;
             //
-            break;
-          case 0x454D4954: // TIME
+            bufp = buf;
+            *bufp = 0;
+          } 
+          else 
+            if ( strcmp("TIME", (char*)buf) == 0 ) {
             cmon << ">> " << "TIME ";
             rtc_spi.printCalendarOn(cmon);
             cmon << " - ";
@@ -227,60 +202,29 @@ void loop() {
             cmon << endl;
             mon << "TIME command. " << endl;
             //
-            break;
-
-          case 0x54455354: // tset
-          case 0x54455343: // cset
-            len = cmon.ithToken((const char*)buf, 1, pos);
-            if ( !len ) break;
-            buf[pos+len] = 0;
-            if ( buf[0] == 'T' ) {
-              cmon << ">> " << "SET TIME TO " << ((char*)buf+pos) << endl;
-              current = strtol((const char*) buf+pos, NULL, HEX);
-              rtc_spi.setTime(current);
-            } 
-            else {
-              cmon << ">> " << "SET CALENDAR TO " << ((char*)buf+pos) << endl;
-              current = strtol((const char*) buf+pos, NULL, HEX);
-              rtc_spi.setCalendar(current);
-            }
-            break;
-
-          case 0x5453494C: // LIST
-            for(int i = 0; i < cardlog.count(); i++) {
-              cmon.printHex(i);
-              cmon << " ";
-              cmon.print(cardlog[i].date, HEX);
-              cmon << " ";
-              cmon.print(cardlog[i].time, HEX);
-              cmon << " ";
-              cmon.printHex(cardlog[i].CID, 8, '-');
-              cmon << " ";
-              cmon.printHex(cardlog[i].PIN, 8);
-              cmon << endl;
-            }
-            break;
-
-          case 0x54495551: //QUIT
+            bufp = buf;
+            *bufp = 0;
+          }
+          else 
+            if ( strcmp("QUIT", (char*)buf) == 0 ) {
             cmon << ">> " << "bye bye." << endl;
             delay(5);
             client.stop();
             mon << "disonnected client." << endl;
             //
-            break;
-
+            bufp = buf;
+            *bufp = 0;
+          } 
+          else {
+            cmon << ">>" << (char*)buf << endl;
+            //
+            bufp = buf;
+            *bufp = 0;
           }
-          bufp = buf;
-          *bufp = 0;
-          client_idle_since = millis();
         }
       }
     }
     // close the connection:
-  } 
-  else {
-    client.stop();
-    mon << "disonnected client by timeout." << endl;
   }
 }
 
@@ -316,6 +260,7 @@ boolean PN532_init() {
   reader_status = IDLE;
   return true;
 }
+
 
 
 

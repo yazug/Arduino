@@ -26,7 +26,7 @@
 #include "Stream.h"
 
 //#define BUFFER_LENGTH 32
-#define BUFFER_LENGTH 48
+#define BUFFER_LENGTH 40
 
 class TwoWire : public Stream
 {

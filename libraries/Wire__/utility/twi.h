@@ -30,7 +30,7 @@
 
   #ifndef TWI_BUFFER_LENGTH
 //  #define TWI_BUFFER_LENGTH 32
-  #define TWI_BUFFER_LENGTH 48
+  #define TWI_BUFFER_LENGTH 40
   #endif
 
   #define TWI_READY 0

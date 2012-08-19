@@ -51,25 +51,6 @@ inline void PN532::send(byte d) {
 	chksum += d;
 }
 
-void PN532::sendpacket(byte len) {
-	byte * p = packet;
-	chksum = 0;
-	Wire.beginTransmission(i2c_addr);
-	// clk is streched by PN532 to make a pause to resume from power-down
-	send(PREAMBLE);
-	send(STARTCODE_1);
-	send(STARTCODE_2);
-	send(len + 1);
-	send(~(len + 1) + 1); // LCS, 1-Packet Length Check Sum
-	send(HOSTTOPN532); // D4
-	for (; len > 0; len--) {
-		send(*p++);
-	}
-	wirewrite(~chksum);
-	wirewrite(POSTAMBLE);
-	Wire.endTransmission();
-}
-
 void PN532::send_ack() {
 	Wire.beginTransmission(i2c_addr);
 	// clk is streched by PN532 to make a pause to resume from power-down
@@ -103,12 +84,11 @@ boolean PN532::checkACKframe(long timeout) {
 	byte frame_head[] = { PREAMBLE, STARTCODE_1, STARTCODE_2 };
 	receivepacket(6);
 	//printHexString(packet, 6);
-	if ( (0 == memcmp(packet, frame_head, 3))
-			&& (packet[5] == 0) ) {
-		if ( packet[3] == 0x00 && packet[4] == 0xff ) {
+	if ((0 == memcmp(packet, frame_head, 3)) && (packet[5] == 0)) {
+		if (packet[3] == 0x00 && packet[4] == 0xff) {
 			comm_status = ACK_FRAME_RECEIVED;
 			return true; // ack'd command
-		} else if ( packet[3] == 0xff && packet[4] == 0x00 ) {
+		} else if (packet[3] == 0xff && packet[4] == 0x00) {
 			comm_status = NACK_FRAME_RECEIVED;
 			return true; // ack'd command
 		}
@@ -128,7 +108,7 @@ byte PN532::receivepacket(int n) {
 	chksum = 0;
 	byte i;
 	byte len;
-	Wire.requestFrom((int) i2c_addr, (int) n+1);
+	Wire.requestFrom((int) i2c_addr, (int) n + 1);
 	receive();
 	for (i = 0; i < n; i++) {
 		// delayMicroseconds(500);
@@ -156,8 +136,27 @@ byte PN532::receivepacket(int n) {
 #endif
 		return 0;
 	}
-	memcpy(packet, packet+5, len);
+	memmove(packet, packet + 5, len);
 	return len;
+}
+
+void PN532::sendpacket(byte len) {
+	byte * p = packet;
+	chksum = 0;
+	Wire.beginTransmission(i2c_addr);
+	// clk is streched by PN532 to make a pause to resume from power-down
+	send(PREAMBLE);
+	send(STARTCODE_1);
+	send(STARTCODE_2);
+	send(len + 1);
+	send(~(len + 1) + 1); // LCS, 1-Packet Length Check Sum
+	send(HOSTTOPN532); // D4
+	for (; len > 0; len--) {
+		send(*p++);
+	}
+	wirewrite(~chksum);
+	wirewrite(POSTAMBLE);
+	Wire.endTransmission();
 }
 
 byte PN532::receivepacket() {
@@ -212,7 +211,7 @@ byte PN532::receivepacket() {
 		comm_status = WRONG_POSTAMBLE;
 		return 0;
 	}
-	memcpy(packet, packet+5, n);
+	memmove(packet, packet + 5, n);
 	return n;
 }
 
@@ -231,11 +230,11 @@ boolean PN532::IRQ_wait(long timeout) {
 		if (timeout < millis()) {
 			comm_status = I2CREADY_TIMEOUT;
 			/*
-			Serial.print("timeout ");
-			Serial.print(timeout);
-			Serial.print(", millis ");
-			Serial.println(millis());
-			*/
+			 Serial.print("timeout ");
+			 Serial.print(timeout);
+			 Serial.print(", millis ");
+			 Serial.println(millis());
+			 */
 			return false;
 		}
 		delayMicroseconds(500);
@@ -282,7 +281,7 @@ boolean PN532::SAMConfiguration(byte mode, byte timeout, byte use_irq) {
 	packet[2] = timeout; //0x14; // timeout 50ms * 20 = 1 second
 	packet[3] = use_irq; //0x01; // use IRQ pin!
 
-	sendpacket( 4);
+	sendpacket(4);
 	last_command = COMMAND_SAMConfiguration;
 	comm_status = COMMAND_ISSUED;
 	if (!checkACKframe()) {
@@ -299,8 +298,8 @@ boolean PN532::SAMConfiguration(byte mode, byte timeout, byte use_irq) {
 boolean PN532::PowerDown(byte wkup, byte genirq) {
 	byte len = 2;
 	packet[0] = COMMAND_PowerDown;
-	packet[1] = wkup & ~(1<<2);
-	if ( genirq == 1 ) {
+	packet[1] = wkup & ~(1 << 2);
+	if (genirq == 1) {
 		packet[2] = genirq;
 		len = 3;
 	}
@@ -315,7 +314,8 @@ boolean PN532::PowerDown(byte wkup, byte genirq) {
 	return true;
 }
 
-byte PN532::InListPassiveTarget(const byte maxtg, const byte brty, byte * data, const byte length) {
+byte PN532::InListPassiveTarget(const byte maxtg, const byte brty, byte * data,
+		const byte length) {
 //	byte inidatalen = 0;
 	packet[0] = COMMAND_InListPassiveTarget;
 	packet[1] = maxtg; // max 1 cards at once (we can set this to 2 later)
@@ -392,6 +392,25 @@ byte PN532::getCommandResponse(byte * resp, const long & wmillis) {
 	return count;
 }
 
+const byte PN532::getAutoPollResponse(byte * respo) {
+	byte cnt;
+	if (!getCommandResponse(respo))
+		return 0;
+	if (respo[0]) {
+		switch (respo[1]) {
+		case Type_FeliCa212kb:
+			targetSet(respo[1], respo + 3 + 3, 8);
+			break;
+		case Type_Mifare:
+			targetSet(respo[1], respo + 3 + 5, respo[3 + 4]);
+			break;
+		}
+	} else {
+		targetClear();
+	}
+	return respo[0];
+}
+
 /*
  byte PN532::felica_getDataExchangeResponse(const byte fcmd, byte * resp) {
  byte count = getCommandResponse(COMMAND_InDataExchange, resp);
@@ -406,7 +425,6 @@ byte PN532::getCommandResponse(byte * resp, const long & wmillis) {
  return count;
  }
  */
-
 
 byte PN532::InDataExchange(const byte Tg, const byte * data,
 		const byte length) {
@@ -479,10 +497,16 @@ byte PN532::InDataExchange(const byte Tg, const byte micmd, const byte blkaddr,
 	return 1;
 }
 
-void PN532::setUID(const byte * uid, const byte uidLen, const byte cardtype) {
+void PN532::targetSet(const byte cardtype, const byte * uid, const byte uidLen) {
 	target.NFCType = cardtype;
-	target.IDLength = max(4, uidLen);
+	target.IDLength = uidLen;
 	memcpy(target.UID, uid, uidLen);
+}
+
+void PN532::targetClear() {
+	target.NFCType = Type_Empty;
+	target.IDLength = 0;
+	target.UID[0] = 0;
 }
 
 byte PN532::mifare_AuthenticateBlock(word blkn, const byte * keyData) {
@@ -672,7 +696,7 @@ byte PN532::felica_RequestService(byte * resp, const word servcodes[],
 	count = getCommunicateThruResponse(resp);
 	if (resp[0] == FELICA_CMD_REQUESTSERVICE + 1 && count >= 10) {
 		byte svnum = resp[9];
-		memcpy(resp, resp + 10, svnum * 2);
+		memmove(resp, resp + 10, svnum * 2);
 		return svnum;
 	}
 	return 0;
@@ -694,7 +718,7 @@ byte PN532::felica_RequestSystemCode(byte * resp) {
 	if (getCommunicateThruResponse(resp) == 0)
 		return 0;
 	byte n = resp[9];
-	memcpy(resp, resp + 10, n * 2);
+	memmove(resp, resp + 10, n * 2);
 	return n;
 }
 
@@ -719,7 +743,7 @@ byte PN532::felica_ReadWithoutEncryption(byte * resp, const word servcode,
 	count = getCommunicateThruResponse(resp);
 	if (resp[9] == 0) {
 		byte blocks = resp[11];
-		memcpy(resp, resp + 12, blocks * 16);
+		memmove(resp, resp + 12, blocks * 16);
 		return blocks;
 	} else {
 		return 0;
@@ -745,7 +769,7 @@ byte PN532::felica_ReadBlocksWithoutEncryption(byte * resp, const word servcode,
 		count = getCommunicateThruResponse(mess);
 		if (mess[9] == 0) {
 			byte blocks = mess[11];
-			memcpy(resp + (16*bno), mess + 12, blocks * 16);
+			memcpy(resp + (16 * bno), mess + 12, blocks * 16);
 		} else {
 			return 0;
 		}

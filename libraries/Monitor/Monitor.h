@@ -42,12 +42,14 @@ public:
 		printHex(&b, 1);
 	}
 
-	void printHex(const byte * a, const int length);
-	void printHex(const char * s, const int length);
-	void printHex(const word * a, const int length);
+	void printHex(const byte * a, const int length, char gap = ' ');
+	void printHex(const char * s, const int length, char gap = 0x00);
+	void printHex(const word * a, const int length, char gap = ' ');
 
 	word readToken(char buf[], long timeout = 200);
-	boolean readLine(char buf[], long wait = 10);
+	boolean readLine(char buf[], int maxlen, long wait = 10);
+
+	static int ithToken(const char buf[], const int item, int & fromindex);
 };
 
 #endif /* MONITOR_H_ */
