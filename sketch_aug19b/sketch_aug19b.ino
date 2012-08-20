@@ -4,7 +4,7 @@ Monitor moni(Serial);
 void setup() {
   Serial.begin(19200);
   
-  moni.print( *((long*)"TSET"),HEX);
+  moni.print( *((long*)"DELT"),HEX);
   moni << endl;
   moni.print( *((long*)"CSET"),HEX);
   moni << endl;

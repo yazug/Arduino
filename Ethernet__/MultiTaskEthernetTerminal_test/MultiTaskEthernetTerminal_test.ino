@@ -34,6 +34,14 @@ EthernetServer server(1234);
 Monitor mon(Serial);
 EthernetClient client;
 long client_idle_since = 0;
+enum {
+  DISCONNECTED,
+  CONNECTED,
+  LISTING
+} 
+server_status = DISCONNECTED;
+int listix;
+
 
 DS3234 rtc_spi(9);
 long lastrtcupdate;
@@ -169,7 +177,7 @@ void loop() {
         mon.printHex(idcard.felica.pin, 8);
         mon << " ISSUE " << idcard.felica.issue << endl;
         cardlog.add(rtc_spi.cal, rtc_spi.time, card.type, card.IDm, idcard.felica.pin);
-        mon << cardlog.count() << endl;
+        //mon << cardlog.count() << endl;
       }
       break;
     case Mifare:
@@ -179,7 +187,7 @@ void loop() {
         mon.printHex(idcard.mifare.pin, 8);
         mon << " ISSUE " << idcard.mifare.issue << endl;
         cardlog.add(rtc_spi.cal, rtc_spi.time, card.type, card.UID, idcard.felica.pin);
-        mon << cardlog.count() << endl;
+        //mon << cardlog.count() << endl;
       }
       break;
     }
@@ -199,87 +207,116 @@ void loop() {
   if ( !client ) {
     if ( client = server.available() ) {
       client_idle_since = millis();
+      server_status = CONNECTED;
       mon << "A New client started." << endl;
     }
   } 
-  else if ( millis() < client_idle_since + 30000L  ) {
-    // an http request ends with a blank line
-    boolean currentLineIsBlank = true;
-    if (client.connected()) {
-      if (client.available()) {
-        Monitor cmon(client);
-        if ( cmon.readLine((char*)bufp, 127) ) {
-          for(int i = 0; buf[i] ; i++) 
-            buf[i] = toupper(buf[i]);
-          switch( *((long*)buf) ) {
-          case 0x52444441: //ADDR
-            cmon << ">> " << "ADDR ";
-            cmon.printHex(mac, 6);
-            cmon << endl;
-            mon << "MAC command. " << endl;
-            //
-            break;
-          case 0x454D4954: // TIME
-            cmon << ">> " << "TIME ";
-            rtc_spi.printCalendarOn(cmon);
-            cmon << " - ";
-            rtc_spi.printTimeOn(cmon);
-            cmon << endl;
-            mon << "TIME command. " << endl;
-            //
-            break;
-
-          case 0x54455354: // tset
-          case 0x54455343: // cset
-            len = cmon.ithToken((const char*)buf, 1, pos);
-            if ( !len ) break;
-            buf[pos+len] = 0;
-            if ( buf[0] == 'T' ) {
-              cmon << ">> " << "SET TIME TO " << ((char*)buf+pos) << endl;
-              current = strtol((const char*) buf+pos, NULL, HEX);
-              rtc_spi.setTime(current);
-            } 
-            else {
-              cmon << ">> " << "SET CALENDAR TO " << ((char*)buf+pos) << endl;
-              current = strtol((const char*) buf+pos, NULL, HEX);
-              rtc_spi.setCalendar(current);
-            }
-            break;
-
-          case 0x5453494C: // LIST
-            for(int i = 0; i < cardlog.count(); i++) {
-              cmon << i << " ";
-              cmon.print(cardlog[i].date, HEX);
-              cmon << " ";
-              cmon.print(cardlog[i].time, HEX);
-              cmon << " ";
-              cmon.printHex(cardlog[i].CID, 8, '-');
-              cmon << " ";
-              cmon.printHex(cardlog[i].PIN, 8);
+  else if ( server_status == CONNECTED ) {
+    if (millis() < client_idle_since + 30000L  ) {
+      // an http request ends with a blank line
+      if (client.connected()) {
+        if (client.available()) {
+          Monitor cmon(client);
+          if ( cmon.readLine((char*)bufp, 127) ) {
+            for(int i = 0; buf[i] ; i++) 
+              buf[i] = toupper(buf[i]);
+            switch( *((long*)buf) ) {
+            case 0x52444441: //ADDR
+              cmon << ">> " << "ADDR ";
+              cmon.printHex(mac, 6);
               cmon << endl;
+              mon << "MAC command. " << endl;
+              //
+              break;
+            case 0x454D4954: // TIME
+              cmon << ">> " << "TIME ";
+              rtc_spi.printCalendarOn(cmon);
+              cmon << " - ";
+              rtc_spi.printTimeOn(cmon);
+              cmon << endl;
+              mon << "TIME command. " << endl;
+              //
+              break;
+
+            case 0x54455354: // tset
+            case 0x54455343: // cset
+              len = cmon.ithToken((const char*)buf, 1, pos);
+              if ( !len ) break;
+              buf[pos+len] = 0;
+              if ( buf[0] == 'T' ) {
+                cmon << ">> " << "SET TIME TO " << ((char*)buf+pos) << endl;
+                current = strtol((const char*) buf+pos, NULL, HEX);
+                rtc_spi.setTime(current);
+              } 
+              else {
+                cmon << ">> " << "SET CALENDAR TO " << ((char*)buf+pos) << endl;
+                current = strtol((const char*) buf+pos, NULL, HEX);
+                rtc_spi.setCalendar(current);
+              }
+              break;
+
+            case 0x5453494C: // LIST
+              server_status = LISTING;
+              listix = 0;
+              break;
+              
+              case 0x544C4544: // DELT
+                len = cmon.ithToken((const char*)buf, 1, pos);
+                if ( !len ) break;
+                buf[pos+len] = 0;
+                cmon << ">> " << "DELETE ENTRIES";
+                current = strtol((const char*) buf+pos, NULL, HEX);
+                current = cardlog.remove(current);
+               cmon << " " << current << ". " << endl;
+                break;
+
+            case 0x54495551: //QUIT
+              cmon << ">> " << "bye bye." << endl;
+              delay(5);
+              client.stop();
+              server_status = DISCONNECTED;
+              mon << "disonnected client." << endl;
+              //
+              break;
+
             }
-            break;
-
-          case 0x54495551: //QUIT
-            cmon << ">> " << "bye bye." << endl;
-            delay(5);
-            client.stop();
-            mon << "disonnected client." << endl;
-            //
-            break;
-
+            bufp = buf;
+            *bufp = 0;
+            client_idle_since = millis();
           }
-          bufp = buf;
-          *bufp = 0;
-          client_idle_since = millis();
         }
       }
+      // close the connection:
+    } 
+    else {
+      client.stop();
+      mon << "disonnected client by timeout." << endl;
     }
-    // close the connection:
   } 
-  else {
-    client.stop();
-    mon << "disonnected client by timeout." << endl;
+  else if ( server_status == LISTING ) {
+    current = millis();
+    Monitor cmon(client);
+    for( /* value is set already */; 
+    listix < cardlog.count() && millis() < current + 200 ; listix++) {
+      if ( listix == 0 ) {
+        cmon << "No  Date   TIME TYPE     Card ID           PIN";
+        cmon << endl;
+      }
+      cmon << listix+1 << "  ";
+      cmon.print(cardlog[listix].date, HEX);
+      cmon << " ";
+      cmon.print(cardlog[listix].time, HEX);
+      cmon << " ";
+      cmon.print(cardlog[listix].type, HEX);
+      cmon << " ";
+      cmon.printHex(cardlog[listix].CID, 8, '-');
+      cmon << " ";
+      cmon.printHex(cardlog[listix].PIN, 8);
+      cmon << endl;
+    }
+    if ( !(listix < cardlog.count()) )
+      // if finished.
+      server_status = CONNECTED;
   }
 }
 
@@ -315,6 +352,8 @@ boolean PN532_init() {
   reader_status = IDLE;
   return true;
 }
+
+
 
 
 

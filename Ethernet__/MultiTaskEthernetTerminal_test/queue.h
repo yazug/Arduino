@@ -28,9 +28,22 @@ struct Queue {
     }
     if ( tally == history_size ) { 
       sindex++;
+      sindex %= history_size;
     } else {
       tally++;
     }
+  }
+  
+  int remove(int n) {
+    Serial.println(tally);
+    Serial.println(sindex);
+    n = min(n, tally);
+    sindex += n;
+    sindex %= history_size;
+    tally -= n;
+    Serial.println(tally);
+    Serial.println(sindex);
+    return n;
   }
   
   History & operator[](const int i) {
