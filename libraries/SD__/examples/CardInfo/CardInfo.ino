@@ -21,7 +21,7 @@
  */
  // include the SD library:
 #include <SPI.h>
-#include "SD_SS.h"
+#include "SD.h"
 
 // set up variables using the SD utility library functions:
 Sd2Card card;
@@ -32,7 +32,7 @@ SdFile root;
 // Arduino Ethernet shield: pin 4
 // Adafruit SD shields and modules: pin 10
 // Sparkfun SD shield: pin 8
-const int chipSelect = 10;
+const int chipSelect = 4;
 
 void setup()
 {
@@ -55,7 +55,7 @@ void setup()
 
   // we'll use the initialization code from the utility libraries
   // since we're just testing if the card is working!
-  if (!card.init(SPI_HALF_SPEED, chipSelect)) {
+  if (!card.init(SPI_FULL_SPEED, chipSelect)) {
     Serial.println("initialization failed. Things to check:");
     Serial.println("* is a card is inserted?");
     Serial.println("* Is your wiring correct?");

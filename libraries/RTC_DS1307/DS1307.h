@@ -91,29 +91,6 @@ public:
 	static long JD2000(const long & yymmdd);
 
 
-	size_t printTimeOn(Print & pr) {
-		pr.print((time >> 16 & BITS_HR)>>4 & 0x0f, HEX);
-		pr.print((time >> 16 & BITS_HR) & 0x0f, HEX);
-		pr.print(':');
-		pr.print((time >> 8 & BITS_MIN)>>4 & 0x0f, HEX);
-		pr.print((time >> 8 & BITS_MIN)& 0x0f, HEX);
-		pr.print(':');
-		pr.print((time & BITS_SEC) >> 4 & 0x0f, HEX);
-		pr.print((time & BITS_SEC) & 0x0f, HEX);
-		return 8;
-	}
-
-	size_t printCalendarOn(Print & pr) {
-		pr.print(0x2000 + (cal >> 16 & BITS_YR), HEX);
-		pr.print('/');
-		pr.print((cal >> 8 & BITS_MTH)>>4 & 0x0f, HEX);
-		pr.print((cal >> 8 & BITS_MTH)& 0x0f, HEX);
-		pr.print('/');
-		pr.print((cal & BITS_DATE)>>4&0x0f, HEX);
-		pr.print((cal & BITS_DATE)&0x0f, HEX);
-		return 10;
-	}
-
 	static char * copyNameOfDay(char * buf, byte d) {
 		strcpy_P(buf, NameOfDay + d * 4);
 		return buf;

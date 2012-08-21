@@ -2,9 +2,11 @@
 #include "DS3234.h"
 
 
-PROGMEM const prog_char DS3234::NameOfDay[] =
+PROGMEM const prog_char
+	DS3234::NameOfDay[] =
 		"Sun\0Mon\0Tue\0Wed\0Thu\0Fri\0Sat\0";
-PROGMEM const prog_char DS3234::NameOfMonth[] =
+PROGMEM const prog_char
+	DS3234::NameOfMonth[] =
 		"Jan\0Feb\0Mar\0Apr\0May\0Jun\0Jul\0Aug\0Sep\0Oct\0Nov\0Dec\0";
 
 long DS3234::JD2000(const long & yymmdd) {

@@ -19,7 +19,7 @@
  This example code is in the public domain.
  	 
  */
-
+#include <SPI.h>
 #include <SD.h>
 
 // On the Ethernet Shield, CS is pin 4. Note that even if it's not

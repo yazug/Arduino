@@ -5,6 +5,7 @@
 #include "Wire.h"
 #include "PN532_I2C.h"
 #include "ISO14443.h"
+#include <sd_raw.h>
 
 #include "Monitor.h"
 
@@ -46,6 +47,7 @@ int listix;
 DS3234 rtc_spi(9);
 long lastrtcupdate;
 
+MemCard sd(4);
 
 byte buf[128];
 byte * bufp;
@@ -67,6 +69,9 @@ void setup() {
   server.begin();
   mon << "server is at " << Ethernet.localIP() << endl;
 
+  sd.begin();
+  if ( !print_disk_info() ) mon << "error!" << endl;  
+
   Wire.begin();
   nfc.begin();
   PN532_init();
@@ -74,7 +79,7 @@ void setup() {
   card.clear();
   cardlog.init();
 
-  mon << "initialized." << endl;
+  mon << "initialize finished." << endl;
   
   bufp = buf;
   *bufp = 0;
@@ -83,7 +88,7 @@ void setup() {
 
 void loop() {
   // listen for incoming clients
-//  char c;
+  char c;
   byte cnt;
   long current;
   int pos, len;
@@ -98,9 +103,9 @@ void loop() {
     current = rtc_spi.time;
     rtc_spi.update();
     if ( current != rtc_spi.time ) {
-      mon.print(rtc_spi.time, HEX);
+      rtc_spi.printTimeOn(mon);
       mon << " ";
-      mon.print(rtc_spi.cal, HEX);
+      rtc_spi.printCalendarOn(mon);
       mon << endl;
     }
   }
@@ -233,9 +238,9 @@ void loop() {
               break;
             case 0x454D4954: // TIME
               cmon << ">> " << "TIME ";
-              cmon.print(rtc_spi.cal, HEX);
+              rtc_spi.printCalendarOn(cmon);
               cmon << " - ";
-              cmon.print(rtc_spi.time);
+              rtc_spi.printTimeOn(cmon);
               cmon << endl;
               mon << "TIME command. " << endl;
               //
@@ -281,6 +286,7 @@ void loop() {
               mon << "disonnected client." << endl;
               //
               break;
+
             }
             bufp = buf;
             *bufp = 0;
@@ -354,5 +360,58 @@ boolean PN532_init() {
   reader_status = IDLE;
   return true;
 }
+
+
+
+
+
+
+
+int print_disk_info()
+{
+
+  MemCard::sd_raw_info disk_info;
+  if(!sd.get_info(&disk_info))
+  {
+    return 0;
+  }
+
+  Serial.println();
+  Serial.print("rev:    ");
+  Serial.print(disk_info.revision,HEX);
+  Serial.println();
+  Serial.print("serial: 0x");
+  Serial.print(disk_info.serial,HEX);
+  Serial.println();
+  Serial.print("date:   ");
+  Serial.print(disk_info.manufacturing_month,DEC);
+  Serial.println();
+  Serial.print(disk_info.manufacturing_year,DEC);
+  Serial.println();
+  Serial.print("size:   ");
+  Serial.print(disk_info.capacity,DEC);
+  Serial.println();
+  Serial.print("copy:   ");
+  Serial.print(disk_info.flag_copy,DEC);
+  Serial.println();
+  Serial.print("wr.pr.: ");
+  Serial.print(disk_info.flag_write_protect_temp,DEC);
+  Serial.print('/');
+  Serial.print(disk_info.flag_write_protect,DEC);
+  Serial.println();
+  Serial.print("format: ");
+  Serial.print(disk_info.format,DEC);
+  Serial.println();
+  Serial.print("free:   ");
+
+  return 1;
+}
+
+
+
+
+
+
+
 
 

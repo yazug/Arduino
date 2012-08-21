@@ -8,7 +8,11 @@
 #ifndef MONITOR_H_
 #define MONITOR_H_
 
+#if ARDUINO >= 100
 #include <Arduino.h>
+#else
+#include <Wiring.h>
+#endif
 #include <Stream.h>
 // stdlib.h is included in Arduino.h
 

@@ -15,15 +15,15 @@ void setup() {
   Date anotherday  = {1976, 5, 27, 0xff};
   byte chksum;
   Serial.begin(19200);
-  mon << mon.endl 
+  mon << endl 
     << today.year << "/" << (int) today.month << "/" << (int) today.day << 
-    mon.endl << "check sum: " << (int) today.xsum << mon.endl;
+    endl << "check sum: " << (int) today.xsum << endl;
   chksum = write_date(anotherday);
-  mon << "chk: " << (int) chksum << mon.endl;
+  mon << "chk: " << (int) chksum << endl;
   chksum = read_date(today);
-  mon << mon.endl 
+  mon << endl 
     << today.year << "/" << (int) today.month << "/" << (int) today.day << 
-    mon.endl << "check sum: " << (int) chksum << mon.endl;
+    endl << "check sum: " << (int) chksum << endl;
 }
 
 void loop() {
@@ -35,7 +35,7 @@ byte read_date(struct Date & d ) {
   for(int addr = 0; addr < sizeof(Date); addr++, ptr++) {
     *ptr = EEPROM.read(addr);
     c ^= *ptr;
-    mon << (int)c << mon.endl;
+    mon << (int)c << endl;
   }
   return c;
 }
