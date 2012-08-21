@@ -5,6 +5,7 @@
 #include "Wire.h"
 #include "PN532_I2C.h"
 #include "ISO14443.h"
+#include <sd_raw.h>
 
 #include "Monitor.h"
 
@@ -46,6 +47,8 @@ int listix;
 DS3234 rtc_spi(9);
 long lastrtcupdate;
 
+MemCard sd(4);
+
 byte buf[128];
 byte * bufp;
 
@@ -66,6 +69,9 @@ void setup() {
   server.begin();
   mon << "server is at " << Ethernet.localIP() << endl;
 
+  sd.begin();
+  if ( !print_disk_info() ) mon << "error!" << endl;  
+
   Wire.begin();
   nfc.begin();
   PN532_init();
@@ -73,6 +79,8 @@ void setup() {
   card.clear();
   cardlog.init();
 
+  mon << "initialize finished." << endl;
+  
   bufp = buf;
   *bufp = 0;
 }
@@ -359,7 +367,45 @@ boolean PN532_init() {
 
 
 
+int print_disk_info()
+{
 
+  MemCard::sd_raw_info disk_info;
+  if(!sd.get_info(&disk_info))
+  {
+    return 0;
+  }
+
+  Serial.println();
+  Serial.print("rev:    ");
+  Serial.print(disk_info.revision,HEX);
+  Serial.println();
+  Serial.print("serial: 0x");
+  Serial.print(disk_info.serial,HEX);
+  Serial.println();
+  Serial.print("date:   ");
+  Serial.print(disk_info.manufacturing_month,DEC);
+  Serial.println();
+  Serial.print(disk_info.manufacturing_year,DEC);
+  Serial.println();
+  Serial.print("size:   ");
+  Serial.print(disk_info.capacity,DEC);
+  Serial.println();
+  Serial.print("copy:   ");
+  Serial.print(disk_info.flag_copy,DEC);
+  Serial.println();
+  Serial.print("wr.pr.: ");
+  Serial.print(disk_info.flag_write_protect_temp,DEC);
+  Serial.print('/');
+  Serial.print(disk_info.flag_write_protect,DEC);
+  Serial.println();
+  Serial.print("format: ");
+  Serial.print(disk_info.format,DEC);
+  Serial.println();
+  Serial.print("free:   ");
+
+  return 1;
+}
 
 
 

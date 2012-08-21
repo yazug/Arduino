@@ -19,7 +19,7 @@
  */
 #include <Arduino.h>
 #include "SPI.h"
-#include "Sd2Card_SS.h"
+#include "Sd2Card.h"
 //------------------------------------------------------------------------------
 #ifndef SOFTWARE_SPI
 // functions for hardware SPI
@@ -153,12 +153,10 @@ void Sd2Card::chipSelectHigh(void) {
 //------------------------------------------------------------------------------
 void Sd2Card::chipSelectLow(void) {
 //TODO:
-	 // SPI.setClockDivider(spiClockRate_); //SPI_CLOCK_DIV4):
+	  SPI.setClockDivider(spiClockRate_); //SPI_CLOCK_DIV4):
 
 	  SPI.setDataMode(SPI_MODE0);
 	  SPI.setBitOrder(MSBFIRST);
-	  SPI.setClockDivider(spiClockRate_); //SPI_CLOCK_DIV4):
-
 
   digitalWrite(chipSelectPin_, LOW);
 }
@@ -246,11 +244,12 @@ uint8_t Sd2Card::init(uint8_t sckRateID, uint8_t chipSelectPin) {
   // clear double speed
   SPSR &= ~(1 << SPI2X);
 #endif  // SOFTWARE_SPI
+  setSckRate(SPI_CLOCK_DIV128);
 
   // must supply min of 74 clock cycles with CS high.
   for (uint8_t i = 0; i < 10; i++) spiSend(0XFF);
 
-  chipSelectLow();
+  //chipSelectLow();
 
   // command to go idle in SPI mode
   while ((status_ = cardCommand(CMD0, 0)) != R1_IDLE_STATE) {

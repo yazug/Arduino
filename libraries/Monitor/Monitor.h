@@ -13,6 +13,8 @@
 // stdlib.h is included in Arduino.h
 
 const char endl = '\n';
+const char cr = '\r';
+const char tab = '\t';
 
 template<class T>
 inline Stream &operator <<(Stream &stream, T arg) {
@@ -24,13 +26,15 @@ class Monitor : public Stream {
 	Stream & stream;
 //	char * sbuf;
 
+	size_t printNumber(const byte b, const byte base = DEC);
+
 public:
-    virtual size_t write(uint8_t b) { return stream.write(b); }
+    virtual inline size_t write(uint8_t b) { return stream.write(b); }
     using Print::write;
 
     virtual int available() { return stream.available(); }
-    virtual int read() { return stream.read(); }
-    virtual int peek() { return stream.peek(); }
+    virtual inline int read() { return stream.read(); }
+    virtual inline int peek() { return stream.peek(); }
     virtual void flush() { stream.flush(); }
 
 	Monitor(Stream & s) : stream(s) {

@@ -7,6 +7,32 @@
 
 #include "Monitor.h"
 
+size_t Monitor::printNumber(const byte b, const byte base) {
+	char t;
+	switch(base) {
+	case HEX:
+		t = b>>4;
+		write( t + (t > 9 ? char('A' - 10) : '0') );
+		t = b & 0x0f;
+		write(t + (t > 9 ? char('A' - 10) : '0') );
+		return 2;
+		break;
+	case DEC:
+		return print(b, DEC);
+		break;
+	case 255:
+		if ( isprint(b) )
+			write((char) b);
+		else {
+			write('$');
+			return print(b, DEC) + 1;
+		}
+		break;
+	}
+	return 1;
+}
+
+
 void Monitor::printHex(const byte * a, const int length, const char gap) {
 	for (int i = 0; i < length; ) {
 		print(a[i]>>4, HEX);
