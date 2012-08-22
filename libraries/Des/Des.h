@@ -7,7 +7,11 @@
 
 #include <avr/pgmspace.h>
 
+#if ARDUINO >= 100
+#include "Arduino.h"
+#else
 #include "Wprogram.h"
+#endif
 
 class Des {
 
@@ -85,7 +89,7 @@ right ^= temp;					\
 left  ^= temp;					\
 left  =  (left << 1) | (left >> 31);
 
-static void initial_permutation(unsigned long &left, unsigned long &temp, unsigned long &right) {
+static void initial_permutation(uint32_t &left, uint32_t &temp, uint32_t &right) {
   DO_PERMUTATION(left, temp, right, 4, 0x0f0f0f0f)	
   DO_PERMUTATION(left, temp, right, 16, 0x0000ffff)	
   DO_PERMUTATION(right, temp, left, 2, 0x33333333)	
@@ -134,7 +138,7 @@ to ^= pgm_dword(sbox1, (work>>24) & 0x3f );
     return (unsigned long) pgm_read_dword(box+n);
   }
 
-  static void read64bit(const byte data[], unsigned long & left, unsigned long &right) {
+  static void read64bit(const byte data[], uint32_t & left, uint32_t &right) {
     left  = ((unsigned long)data[0] << 24) 
         | ((unsigned long)data[1] << 16) 
         | ((unsigned long)data[2] << 8) 

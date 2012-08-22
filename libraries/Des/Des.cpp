@@ -277,7 +277,7 @@ void Des::ecb_crypt(const char * _from, char * _to, int mode) {
   keys = mode ? decrypt_subkeys : encrypt_subkeys;
   read64bit(from, left, right);
 //  INITIAL_PERMUTATION (left, work, right)
-  initial_permutation(left,work, right);
+  initial_permutation(left, work, right);
  /*
   Serial.println("INITIAL_PERNUMTATION:");
   Serial.println(left, HEX);
