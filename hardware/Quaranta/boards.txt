@@ -1,6 +1,6 @@
 ##############################################################
 
-atmega644.name=Sanguino W/ ATmega644P
+atmega644.name=Quaranta 644p @ 16MHz
 
 atmega644.upload.protocol=stk500
 atmega644.upload.maximum_size=63488
@@ -18,10 +18,11 @@ atmega644.bootloader.lock_bits=0x0F
 atmega644.build.mcu=atmega644p
 atmega644.build.f_cpu=16000000L
 atmega644.build.core=arduino
+atmega644.build.variant=quaranta
 
 ##############################################################
 
-atmega12848m.name=Sanguino W/ ATmega1284p 8mhz
+atmega12848m.name=Quaranta 1284p @ 8MHz
 
 atmega12848m.upload.protocol=stk500
 atmega12848m.upload.maximum_size=131072
@@ -38,10 +39,11 @@ atmega12848m.bootloader.lock_bits=0x0F
 atmega12848m.build.mcu=atmega1284p
 atmega12848m.build.f_cpu=8000000L
 atmega12848m.build.core=arduino
+atmega12848m.build.variant=quaranta
 
 ##############################################################
 
-atmega1284.name=Sanguino W/ ATmega1284p 16mhz
+atmega1284.name=Quaranta 1284p @ 16MHz
 
 atmega1284.upload.protocol=stk500
 atmega1284.upload.maximum_size=131072
@@ -58,4 +60,6 @@ atmega1284.bootloader.lock_bits=0x0F
 atmega1284.build.mcu=atmega1284p
 atmega1284.build.f_cpu=16000000L
 atmega1284.build.core=arduino
+atmega1284.build.variant=quaranta
+
 #
