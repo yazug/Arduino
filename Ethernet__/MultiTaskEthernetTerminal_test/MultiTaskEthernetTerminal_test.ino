@@ -43,7 +43,7 @@ server_status = DISCONNECTED;
 int listix;
 
 
-DS3234 rtc_spi(9);
+DS3234 rtc_spi(11);
 long lastrtcupdate;
 
 
@@ -330,7 +330,7 @@ void init_Ethernet() {
   }
   IPAddress ip(192,168,1, 177);
   IPAddress gateway(192,168,1, 1);
-  IPAddress subnet(255, 255, 0, 0);
+  IPAddress subnet(255, 255, 255, 0);
   Ethernet.begin(mac, ip, gateway, subnet);
 }
 
