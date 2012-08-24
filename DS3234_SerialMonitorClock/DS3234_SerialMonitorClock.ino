@@ -12,15 +12,8 @@
 #include <SPI.h>
 #include "DS3234.h"
 
-#include <string.h>
 
-
-byte decToBcd(byte d) { 
-  return ((d/10)<<4) + (d%10); 
-}	
-
-
-DS3234 rtc(9);
+DS3234 rtc(11);
 long clockval;
 
 void setup() {
@@ -42,7 +35,7 @@ void setup() {
 
 void loop() {
   long temp;
-  byte buf[16], * p;
+  byte * p;
   byte c, serbuf[32];
   long idlemillis;
   int bp;
@@ -70,15 +63,15 @@ void loop() {
       switch(serbuf[0]) {
       case 'T':
       case 't':
-        temp = strtol((char*)&serbuf[1], NULL, 16);
-        rtc.setTime(temp);
-        Serial.println(temp, HEX);
+        rtc.time = strtol((char*)&serbuf[1], NULL, 16);
+        rtc.setTime();
+        Serial.println(rtc.time, HEX);
         break;
       case 'C':
       case 'c':
-        temp = strtol((char*)&serbuf[1], NULL, HEX);
-        rtc.setCalendar(temp);
-        Serial.println(temp, HEX);
+        rtc.cal = strtol((char*)&serbuf[1], NULL, HEX);
+        rtc.setCalendar();
+        Serial.println(rtc.cal, HEX);
         break;
       }
     }
@@ -89,12 +82,27 @@ void loop() {
   if ( clockval != rtc.time ) {
     clockval = rtc.time;
     rtc.updateCalendar();
-
-    Serial.print(rtc.cal, HEX);
-    Serial.print(" ");
-    Serial.print(rtc.time, HEX);
-    Serial.print(" ");
-    Serial.print(rtc.copyNameOfDay((char*)buf, rtc.dayOfWeek()));
+    
+    Serial.print("20");
+    Serial.print(rtc.cal>>20&0x0f, HEX);
+    Serial.print(rtc.cal>>16&0x0f, HEX);
+    Serial.print('/');
+    Serial.print(rtc.cal>>8&0xff, HEX);
+    Serial.print('/');
+    Serial.print(rtc.cal&0xff, HEX);
+    Serial.print(' ');
+    Serial.print(rtc.time>>20&0x0f, HEX);
+    Serial.print(rtc.time>>16&0x0f, HEX);
+    Serial.print(':');
+    Serial.print(rtc.time>>12&0x0f, HEX);
+    Serial.print(rtc.time>>8&0x0f, HEX);
+    Serial.print(':');
+    Serial.print(rtc.time>>4&0x0f, HEX);
+    Serial.print(rtc.time&0x0f, HEX);
+    Serial.print(' ');
+    Serial.print(rtc.copyNameOfDay((char*)serbuf, rtc.dayOfWeek()));
+    Serial.print(' ');
+    Serial.print(rtc.copyNameOfMonth((char*)serbuf, rtc.cal>>8&0x0f));
     Serial.println();
 
     if ( (rtc.time & 0xff) == 0 || (rtc.time & 0xff) == 0x30 ) {

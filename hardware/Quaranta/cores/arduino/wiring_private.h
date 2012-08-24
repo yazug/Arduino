@@ -27,11 +27,10 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include <avr/delay.h>
 #include <stdio.h>
 #include <stdarg.h>
 
-#include "wiring.h"
+#include "Arduino.h"
 
 #ifdef __cplusplus
 extern "C"{
@@ -55,7 +54,7 @@ extern "C"{
 
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
 #define EXTERNAL_NUM_INTERRUPTS 8
-#elif defined(__AVR_ATmega644P__) || defined(__AVR_ATmega1284P__)
+#elif defined(__AVR_ATmega1284P__) 
 #define EXTERNAL_NUM_INTERRUPTS 3
 #else
 #define EXTERNAL_NUM_INTERRUPTS 2

@@ -22,45 +22,44 @@
   $Id: wiring.h 249 2007-02-03 16:52:51Z mellis $
 */
 
+// Quaranta
+
 #ifndef Pins_Arduino_h
 #define Pins_Arduino_h
 
 #include <avr/pgmspace.h>
 
-#define TX_RX_LED_INIT	DDRD |= (1<<5), DDRB |= (1<<0)
-#define TXLED0			PORTD |= (1<<5)
-#define TXLED1			PORTD &= ~(1<<5)
-#define RXLED0			PORTB |= (1<<0)
-#define RXLED1			PORTB &= ~(1<<0)
+#define digitalPinHasPWM(p)         ((p) == 4 || (p) == 5 || (p) == 6 || (p) == 7 || (p) == 11 || (p) == 12)
 
-static const uint8_t SDA = 2;
-static const uint8_t SCL = 3;
+#define NUM_DIGITAL_PINS            32
+#define NUM_ANALOG_INPUTS           8
+#define analogInputToDigitalPin(p)  ((p < 8) ? (p) + 24 : -1)
 
-// Map SPI port to 'new' pins D14..D17
-static const uint8_t SS   = 17;
-static const uint8_t MOSI = 16;
+static const uint8_t SDA = 16; // PC1
+static const uint8_t SCL = 17; // PC0
+
+// Map SPI port
+static const uint8_t SS   = 12; // PB4
+static const uint8_t MOSI = 13;
 static const uint8_t MISO = 14;
-static const uint8_t SCK  = 15;
+static const uint8_t SCK  = 15; // PB7
+static const uint8_t LED_BUILTIN = 15;
+
 
 // Mapping of analog pins as digital I/O
-// A6-A11 share with digital pins
-static const uint8_t A0 = 18;
-static const uint8_t A1 = 19;
-static const uint8_t A2 = 20;
-static const uint8_t A3 = 21;
-static const uint8_t A4 = 22;
-static const uint8_t A5 = 23;
-static const uint8_t A6 = 24;	// D4
-static const uint8_t A7 = 25;	// D6
-static const uint8_t A8 = 26;	// D8
-static const uint8_t A9 = 27;	// D9
-static const uint8_t A10 = 28;	// D10
-static const uint8_t A11 = 29;	// D12
+static const uint8_t A0 = 24; //PA0
+static const uint8_t A1 = 25;
+static const uint8_t A2 = 26;
+static const uint8_t A3 = 27;
+static const uint8_t A4 = 28;
+static const uint8_t A5 = 29;
+static const uint8_t A6 = 30;
+static const uint8_t A7 = 31;
 
-#define digitalPinToPCICR(p)    ((((p) >= 8 && (p) <= 11) || ((p) >= 14 && (p) <= 17) || ((p) >= A8 && (p) <= A10)) ? (&PCICR) : ((uint8_t *)0))
-#define digitalPinToPCICRbit(p) 0
-#define digitalPinToPCMSK(p)    ((((p) >= 8 && (p) <= 11) || ((p) >= 14 && (p) <= 17) || ((p) >= A8 && (p) <= A10)) ? (&PCMSK0) : ((uint8_t *)0))
-#define digitalPinToPCMSKbit(p) ( ((p) >= 8 && (p) <= 11) ? (p) - 4 : ((p) == 14 ? 3 : ((p) == 15 ? 1 : ((p) == 16 ? 2 : ((p) == 17 ? 0 : (p - A8 + 4))))))
+#define digitalPinToPCICR(p)    (((p) >= 0 && (p) <= 32) ? (&PCICR) : ((uint8_t *)0))
+#define digitalPinToPCICRbit(p) (((p) <= 7) ? 3 : (((p) <= 15) ? 2 : (((p) <= 23) ? 1 : 0 ) ))
+#define digitalPinToPCMSK(p)    (((p) <= 7) ? (&PCMSK3) : (((p) <= 15) ? (&PCMSK2) : (((p) <= 23) ? (&PCMSK1) : (&PCMSK0) )))
+#define digitalPinToPCMSKbit(p) (((p) <= 7) ? (p) : (((p) <= 15) ? ((p) - 8) : (((p) <= 23) ? ((p) - 16) : ((p) - 24) )  ))
 
 //	__AVR_ATmega32U4__ has an unusual mapping of pins to channels
 extern const uint8_t PROGMEM analog_pin_to_channel_PGM[];
@@ -68,188 +67,162 @@ extern const uint8_t PROGMEM analog_pin_to_channel_PGM[];
 
 #ifdef ARDUINO_MAIN
 
-// On the Arduino board, digital pins are also used
-// for the analog output (software PWM).  Analog input
-// pins are a separate set.
-
-// ATMEL ATMEGA32U4 / ARDUINO LEONARDO
+// ATMEL ATMEGA644P / Quaranta
 //
-// D0				PD2					RXD1/INT2
-// D1				PD3					TXD1/INT3
-// D2				PD1		SDA			SDA/INT1
-// D3#				PD0		PWM8/SCL	OC0B/SCL/INT0
-// D4		A6		PD4					ADC8
-// D5#				PC6		???			OC3A/#OC4A
-// D6#		A7		PD7		FastPWM		#OC4D/ADC10
-// D7				PE6					INT6/AIN0
+//                   +---\/---+
+//  INT0 (D 8) PB0  1|        |40  PA0 (AI 0 / D24)
+//  INT1 (D 9) PB1  2|        |39  PA1 (AI 1 / D25)
+//  INT2 (D10) PB2  3|        |38  PA2 (AI 2 / D26)
+//   PWM (D11) PB3  4|        |37  PA3 (AI 3 / D27)
+//   PWM (D12) PB4  5|        |36  PA4 (AI 4 / D28)
+//  MOSI (D13) PB5  6|        |35  PA5 (AI 5 / D29)
+//  MISO (D14) PB6  7|        |34  PA6 (AI 6 / D30)
+//   SCK (D15) PB7  8|        |33  PA7 (AI 7 / D31)
+//             RST  9|        |32  AREF
+//             VCC 10|        |31  GND
+//             GND 11|        |30  AVCC
+//           XTAL2 12|        |29  PC7 (D 23)
+//           XTAL1 13|        |28  PC6 (D 22)
+//  RX0 (D 0)  PD0 14|        |27  PC5 (D 21) TDI
+//  TX0 (D 1)  PD1 15|        |26  PC4 (D 20) TDO
+//  RX1 (D  2) PD2 16|        |25  PC3 (D 19) TMS
+//  TX1 (D  3) PD3 17|        |24  PC2 (D 18) TCK
+//  PWM (D  4) PD4 18|        |23  PC1 (D 17) SDA
+//  PWM (D  5) PD5 19|        |22  PC0 (D 16) SCL
+//  PWM (D  6) PD6 20|        |21  PD7 (D  7) PWM
+//                   +--------+
 //
-// D8		A8		PB4					ADC11/PCINT4
-// D9#		A9		PB5		PWM16		OC1A/#OC4B/ADC12/PCINT5
-// D10#		A10		PB6		PWM16		OC1B/0c4B/ADC13/PCINT6
-// D11#				PB7		PWM8/16		0C0A/OC1C/#RTS/PCINT7
-// D12		A11		PD6					T1/#OC4D/ADC9
-// D13#				PC7		PWM10		CLK0/OC4A
-//
-// A0		D18		PF7					ADC7
-// A1		D19		PF6					ADC6
-// A2		D20 	PF5					ADC5
-// A3		D21 	PF4					ADC4
-// A4		D22		PF1					ADC1
-// A5		D23 	PF0					ADC0
-//
-// New pins D14..D17 to map SPI port to digital pins
-//
-// MISO		D14		PB3					MISO,PCINT3
-// SCK		D15		PB1					SCK,PCINT1
-// MOSI		D16		PB2					MOSI,PCINT2
-// SS		D17		PB0					RXLED,SS/PCINT0
-//
-// TXLED			PD5
-// RXLED		    PB0
-// HWB				PE2					HWB
 
 // these arrays map port names (e.g. port B) to the
 // appropriate addresses for various functions (e.g. reading
 // and writing)
 const uint16_t PROGMEM port_to_mode_PGM[] = {
 	NOT_A_PORT,
-	NOT_A_PORT,
+	(uint16_t) &DDRA,
 	(uint16_t) &DDRB,
 	(uint16_t) &DDRC,
 	(uint16_t) &DDRD,
-	(uint16_t) &DDRE,
-	(uint16_t) &DDRF,
 };
 
 const uint16_t PROGMEM port_to_output_PGM[] = {
 	NOT_A_PORT,
-	NOT_A_PORT,
+	(uint16_t) &PORTA,
 	(uint16_t) &PORTB,
 	(uint16_t) &PORTC,
 	(uint16_t) &PORTD,
-	(uint16_t) &PORTE,
-	(uint16_t) &PORTF,
 };
 
 const uint16_t PROGMEM port_to_input_PGM[] = {
 	NOT_A_PORT,
-	NOT_A_PORT,
+	(uint16_t) &PINA,
 	(uint16_t) &PINB,
 	(uint16_t) &PINC,
 	(uint16_t) &PIND,
-	(uint16_t) &PINE,
-	(uint16_t) &PINF,
 };
 
-const uint8_t PROGMEM digital_pin_to_port_PGM[30] = {
-	PD, // D0 - PD2
-	PD,	// D1 - PD3
-	PD, // D2 - PD1
-	PD,	// D3 - PD0
-	PD,	// D4 - PD4
-	PC, // D5 - PC6
-	PD, // D6 - PD7
-	PE, // D7 - PE6
-	
-	PB, // D8 - PB4
-	PB,	// D9 - PB5
-	PB, // D10 - PB6
-	PB,	// D11 - PB7
-	PD, // D12 - PD6
-	PC, // D13 - PC7
-	
-	PB,	// D14 - MISO - PB3
-	PB,	// D15 - SCK - PB1
-	PB,	// D16 - MOSI - PB2
-	PB,	// D17 - SS - PB0
-	
-	PF,	// D18 - A0 - PF7
-	PF, // D19 - A1 - PF6
-	PF, // D20 - A2 - PF5
-	PF, // D21 - A3 - PF4
-	PF, // D22 - A4 - PF1
-	PF, // D23 - A5 - PF0
-	
-	PD, // D24 / D4 - A6 - PD4
-	PD, // D25 / D6 - A7 - PD7
-	PB, // D26 / D8 - A8 - PB4
-	PB, // D27 / D9 - A9 - PB5
-	PB, // D28 / D10 - A10 - PB6
-	PD, // D29 / D12 - A11 - PD6
+const uint8_t PROGMEM digital_pin_to_port_PGM[] = {
+	PD, /* 0 */
+	PD,
+	PD,
+	PD,
+	PD,
+	PD,
+	PD,
+	PD,
+	PB, /* 8 */
+	PB,
+	PB,
+	PB,
+	PB,
+	PB,
+	PB,
+	PB,
+	PC, /* 16 */
+	PC,
+	PC,
+	PC,
+	PC,
+	PC,
+	PC,
+	PC,
+	PA,
+	PA,
+	PA,
+	PA,
+	PA,
+	PA,
+	PA,
+	PA,
 };
 
-const uint8_t PROGMEM digital_pin_to_bit_mask_PGM[30] = {
-	_BV(2), // D0 - PD2
-	_BV(3),	// D1 - PD3
-	_BV(1), // D2 - PD1
-	_BV(0),	// D3 - PD0
-	_BV(4),	// D4 - PD4
-	_BV(6), // D5 - PC6
-	_BV(7), // D6 - PD7
-	_BV(6), // D7 - PE6
-	
-	_BV(4), // D8 - PB4
-	_BV(5),	// D9 - PB5
-	_BV(6), // D10 - PB6
-	_BV(7),	// D11 - PB7
-	_BV(6), // D12 - PD6
-	_BV(7), // D13 - PC7
-	
-	_BV(3),	// D14 - MISO - PB3
-	_BV(1),	// D15 - SCK - PB1
-	_BV(2),	// D16 - MOSI - PB2
-	_BV(0),	// D17 - SS - PB0
-	
-	_BV(7),	// D18 - A0 - PF7
-	_BV(6), // D19 - A1 - PF6
-	_BV(5), // D20 - A2 - PF5
-	_BV(4), // D21 - A3 - PF4
-	_BV(1), // D22 - A4 - PF1
-	_BV(0), // D23 - A5 - PF0
-	
-	_BV(4), // D24 / D4 - A6 - PD4
-	_BV(7), // D25 / D6 - A7 - PD7
-	_BV(4), // D26 / D8 - A8 - PB4
-	_BV(5), // D27 / D9 - A9 - PB5
-	_BV(6), // D28 / D10 - A10 - PB6
-	_BV(6), // D29 / D12 - A11 - PD6
+const uint8_t PROGMEM digital_pin_to_bit_mask_PGM[] = {
+	_BV(0), /* 0, port D */
+	_BV(1),
+	_BV(2),
+	_BV(3),
+	_BV(4),
+	_BV(5),
+	_BV(6),
+	_BV(7),
+	_BV(0), /* 8, port B */
+	_BV(1),
+	_BV(2),
+	_BV(3),
+	_BV(4),
+	_BV(5),
+	_BV(6),
+	_BV(7),
+	_BV(0), /* 16, port C */
+	_BV(1),
+	_BV(2),
+	_BV(3),
+	_BV(4),
+	_BV(5),
+	_BV(6),
+	_BV(7),
+	_BV(0), /* 24, port A */
+	_BV(1),
+	_BV(2),
+	_BV(3),
+	_BV(4),
+	_BV(5),
+	_BV(6),
+	_BV(7),
 };
 
-const uint8_t PROGMEM digital_pin_to_timer_PGM[16] = {
-	NOT_ON_TIMER,	
+const uint8_t PROGMEM digital_pin_to_timer_PGM[] = {
+	NOT_ON_TIMER, /* 0 - port D */
 	NOT_ON_TIMER,
 	NOT_ON_TIMER,
-	TIMER0B,		/* 3 */
 	NOT_ON_TIMER,
-	TIMER3A,		/* 5 */
-	TIMER4D,		/* 6 */
-	NOT_ON_TIMER,	
-	
-	NOT_ON_TIMER,	
-	TIMER1A,		/* 9 */
-	TIMER1B,		/* 10 */
-	TIMER0A,		/* 11 */
-	
-	NOT_ON_TIMER,	
-	TIMER4A,		/* 13 */
-	
-	NOT_ON_TIMER,	
+	TIMER1B,
+	TIMER1A,
+	TIMER2B,
+	TIMER2A,
+	NOT_ON_TIMER, /* 8 - port B */
 	NOT_ON_TIMER,
-};
-
-const uint8_t PROGMEM analog_pin_to_channel_PGM[12] = {
-	7,	// A0				PF7					ADC7
-	6,	// A1				PF6					ADC6	
-	5,	// A2				PF5					ADC5	
-	4,	// A3				PF4					ADC4
-	1,	// A4				PF1					ADC1	
-	0,	// A5				PF0					ADC0	
-	8,	// A6		D4		PD4					ADC8
-	10,	// A7		D6		PD7					ADC10
-	11,	// A8		D8		PB4					ADC11
-	12,	// A9		D9		PB5					ADC12
-	13,	// A10		D10		PB6					ADC13
-	9	// A11		D12		PD6					ADC9
+	NOT_ON_TIMER,
+	TIMER0A,
+	TIMER0B,
+	NOT_ON_TIMER,
+	NOT_ON_TIMER,
+	NOT_ON_TIMER,
+	NOT_ON_TIMER, /* 16 - port C */
+	NOT_ON_TIMER,
+	NOT_ON_TIMER,
+	NOT_ON_TIMER,
+	NOT_ON_TIMER,
+	NOT_ON_TIMER,
+	NOT_ON_TIMER,
+	NOT_ON_TIMER,
+	NOT_ON_TIMER, /* 24 - port A */
+	NOT_ON_TIMER,
+	NOT_ON_TIMER,
+	NOT_ON_TIMER,
+	NOT_ON_TIMER,
+	NOT_ON_TIMER,
+	NOT_ON_TIMER,
+	NOT_ON_TIMER,
 };
 
 #endif /* ARDUINO_MAIN */

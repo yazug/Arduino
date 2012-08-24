@@ -64,7 +64,7 @@ public:
 		init();
 	}
 	void select() {
-		SPI.setClockDivider(SPI_CLOCK_DIV4);
+		SPI.setClockDivider(SPI_CLOCK_DIV16);
 		SPI.setDataMode(SPI_MODE1);
 		SPI.setBitOrder(MSBFIRST);
 		digitalWrite(cs_pin, LOW);

@@ -54,7 +54,7 @@ void loop() {
   if ( nfc.InListPassiveTarget(1,PN532::Type_GenericPassive212kbFeliCa, payload, 5) ) {
     cnt = nfc.getCommandResponse(respbuff);
     if ( cnt)
-      nfc.setUID(respbuff+4, 8, PN532::Type_FeliCa212kb);
+      nfc.targetSet(PN532::Type_FeliCa212kb, respbuff+4, 8);
     word ver = nfc.felica_RequestService(0x1a8b);
     if ( ver != 0xffff ) {
       word blklist[] = {
