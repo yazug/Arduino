@@ -167,9 +167,7 @@ class Sd2Card {
    * select pin.  See sd2Card::init(uint8_t sckRateID, uint8_t chipSelectPin).
    */
   uint8_t init(void) {
-	  // TODO:
-		return init(SPI_FULL_SPEED, chipSelectPin_);
-//    return init(SPI_FULL_SPEED, SD_CHIP_SELECT_PIN);
+    return init(SPI_FULL_SPEED, SD_CHIP_SELECT_PIN);
   }
   /**
    * Initialize an SD flash memory card with the selected SPI clock rate
@@ -177,9 +175,7 @@ class Sd2Card {
    * See sd2Card::init(uint8_t sckRateID, uint8_t chipSelectPin).
    */
   uint8_t init(uint8_t sckRateID) {
-	  // TODO:
-		return init(sckRateID, chipSelectPin_);
-//    return init(sckRateID, SD_CHIP_SELECT_PIN);
+    return init(sckRateID, SD_CHIP_SELECT_PIN);
   }
   uint8_t init(uint8_t sckRateID, uint8_t chipSelectPin);
   void partialBlockRead(uint8_t value);
@@ -212,9 +208,6 @@ class Sd2Card {
  private:
   uint32_t block_;
   uint8_t chipSelectPin_;
-  // TODO:
-	uint8_t spiClockRate_;
-//
   uint8_t errorCode_;
   uint8_t inBlock_;
   uint16_t offset_;
@@ -232,14 +225,6 @@ class Sd2Card {
   uint8_t sendWriteCommand(uint32_t blockNumber, uint32_t eraseCount);
   void chipSelectHigh(void);
   void chipSelectLow(void);
-  // TODO:
-	inline void select() {
-		chipSelectLow();
-	}
-	inline void deselect() {
-		chipSelectHigh();
-	}
-  //
   void type(uint8_t value) {type_ = value;}
   uint8_t waitNotBusy(uint16_t timeoutMillis);
   uint8_t writeData(uint8_t token, const uint8_t* src);
