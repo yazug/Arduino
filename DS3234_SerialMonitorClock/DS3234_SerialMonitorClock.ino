@@ -20,7 +20,7 @@ void setup() {
 //  pinMode(10, OUTPUT);
 //  digitalWrite(10, HIGH);
   
-  Serial.begin(19200);
+  Serial.begin(9600);
   Serial.println("Hi.");
   
   SPI.begin();

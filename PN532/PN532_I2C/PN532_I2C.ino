@@ -13,8 +13,8 @@ void setup() {
   Wire.begin();
   nfc.begin();
 
-  Serial.begin(19200);
-  Serial.println("Start.");
+  Serial.begin(9600);
+  Serial.println("PN532 via I2C Firmware inspection/FeliCa read test.");
 
   if ( nfc.GetFirmwareVersion() 
     && nfc.getCommandResponse(respbuff) ) {
