@@ -30,8 +30,6 @@ class Monitor : public Stream {
 	Stream & stream;
 //	char * sbuf;
 
-	size_t printNumber(const byte b, const byte base = DEC);
-
 public:
     virtual inline size_t write(uint8_t b) { return stream.write(b); }
     using Print::write;

@@ -7,32 +7,6 @@
 
 #include "Monitor.h"
 
-size_t Monitor::printNumber(const byte b, const byte base) {
-	char t;
-	switch(base) {
-	case HEX:
-		t = b>>4;
-		write( t + (t > 9 ? char('A' - 10) : '0') );
-		t = b & 0x0f;
-		write(t + (t > 9 ? char('A' - 10) : '0') );
-		return 2;
-		break;
-	case DEC:
-		return print(b, DEC);
-		break;
-	case 255:
-		if ( isprint(b) )
-			write((char) b);
-		else {
-			write('$');
-			return print(b, DEC) + 1;
-		}
-		break;
-	}
-	return 1;
-}
-
-
 void Monitor::printHex(const byte * a, const int length, const char gap) {
 	for (int i = 0; i < length; ) {
 		print(a[i]>>4, HEX);
@@ -106,7 +80,7 @@ word Monitor::readToken(char buf[], long timeout) {
 
 int Monitor::ithToken(const char buf[], const int item, int & fromix) {
     int tc, tend;
-    for(tc = 0, tend = 0; buf[fromix] ; tc++) {
+    for(tc = 0, tend = 0, fromix = 0; buf[fromix] ; tc++) {
       for (fromix = tend; buf[fromix] ; fromix++)
         if ( !isspace(buf[fromix]) ) break;
       for (tend = fromix; buf[tend] ; tend++)
@@ -120,19 +94,19 @@ int Monitor::ithToken(const char buf[], const int item, int & fromix) {
 boolean Monitor::readLine(char buf[], int maxlen, long wait) {
 	long msec = millis();
 	int bp = 0;
-	byte c = 0;
+	byte c;
 	boolean lineEnded = false;
 
-	buf[bp] = 0;
-	while (available() && (c = read()) && bp < maxlen) {
-		if (iscntrl(c) && bp != 0 ) {
+	while (available() && bp < maxlen) {
+		c = read();
+		if (iscntrl((char)c) ) {
 			lineEnded = true;
-		} else {
-			msec = millis();
-			buf[bp++] = c;
-		}
-		if ( lineEnded || (millis() > wait + msec) )
 			break;
+		}
+		buf[bp++] = c;
+		if ( millis() > wait + msec ) {
+			break;
+		}
 	}
 	buf[bp] = 0;
 	return lineEnded;

@@ -154,7 +154,7 @@ uint8_t const SD_CARD_TYPE_SDHC = 3;
 class Sd2Card {
  public:
   /** Construct an instance of Sd2Card. */
-  Sd2Card(void) : errorCode_(0), inBlock_(0), partialBlockRead_(0), type_(0) {}
+  Sd2Card(const byte sd_cs) : chipSelectPin_(sd_cs), errorCode_(0), inBlock_(0), partialBlockRead_(0), type_(0) {}
   uint32_t cardSize(void);
   uint8_t erase(uint32_t firstBlock, uint32_t lastBlock);
   uint8_t eraseSingleBlockEnable(void);
@@ -170,7 +170,7 @@ class Sd2Card {
    */
   uint8_t init(void) {
 	  // TODO:
-		return init(SPI_CLOCK_DIV4, chipSelectPin_);
+		return init(SPI_CLOCK_DIV4);
 //    return init(SPI_FULL_SPEED, SD_CHIP_SELECT_PIN);
   }
   /**
@@ -178,12 +178,8 @@ class Sd2Card {
    * and the default SD chip select pin.
    * See sd2Card::init(uint8_t sckRateID, uint8_t chipSelectPin).
    */
-  uint8_t init(uint8_t sckRateID) {
-	  // TODO:
-		return init(sckRateID, chipSelectPin_);
-//    return init(sckRateID, SD_CHIP_SELECT_PIN);
-  }
-  uint8_t init(uint8_t sckRateID, uint8_t chipSelectPin);
+  uint8_t init(uint8_t sckRateID);
+
   void partialBlockRead(uint8_t value);
   /** Returns the current value, true or false, for partial block read. */
   uint8_t partialBlockRead(void) const {return partialBlockRead_;}
@@ -232,15 +228,13 @@ class Sd2Card {
   void error(uint8_t code) {errorCode_ = code;}
   uint8_t readRegister(uint8_t cmd, void* buf);
   uint8_t sendWriteCommand(uint32_t blockNumber, uint32_t eraseCount);
-  void chipSelectHigh(void);
-  void chipSelectLow(void);
+  inline void chipSelectHigh(void);
+  inline void chipSelectLow(void);
+  void setSPIMode();
   // TODO:
-	inline void select() {
-		chipSelectLow();
-	}
-	inline void deselect() {
-		chipSelectHigh();
-	}
+  inline void select();
+  inline void deselect();
+
   //
   void type(uint8_t value) {type_ = value;}
   uint8_t waitNotBusy(uint16_t timeoutMillis);
