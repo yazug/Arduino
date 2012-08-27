@@ -14,7 +14,11 @@
 #else
 #include <WProgram.h>
 #endif
+#ifdef NON_ARDUINO_IDE
+#include <SPI/SPI.h>
+#else
 #include <SPI.h>
+#endif
 
 class DS3234 {
 	byte cs_pin;

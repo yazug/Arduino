@@ -21,7 +21,7 @@
  */
 
 #include <SPI.h>
-#include <Ethernet_SPI.h>
+#include <Ethernet_w5100.h>
 
 #include "DS3234.h"
 

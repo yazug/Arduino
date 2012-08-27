@@ -13,7 +13,7 @@
 #include "DS3234.h"
 
 
-DS3234 rtc(11);
+DS3234 rtc(9);
 long clockval;
 
 void setup() {

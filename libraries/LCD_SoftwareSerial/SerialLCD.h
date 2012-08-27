@@ -6,13 +6,13 @@
 #define SerialLCD_h
 
 /*
-#if ARDUINO >= 100
-#include <Arduino.h>
-#else
-#include <WProgram.h>
-#endif
-#include <Print.h>
-*/
+ #if ARDUINO >= 100
+ #include <Arduino.h>
+ #else
+ #include <WProgram.h>
+ #endif
+ #include <Print.h>
+ */
 #include <SoftwareSerial.h>
 
 #include "CharacterLCD.h"
@@ -39,11 +39,11 @@ private:
 
 public:
 	SerialLCD(HardwareSerial & stream) :
-		serport(stream), sertype(HARDWARESERIAL) {
+			serport(stream), sertype(HARDWARESERIAL) {
 	}
 
 	SerialLCD(SoftwareSerial & stream) :
-		serport(stream), sertype(SOFTWARESERIAL) {
+			serport(stream), sertype(SOFTWARESERIAL) {
 	}
 
 	void init(uint8_t cols, uint8_t rows, uint8_t charsize);
@@ -57,8 +57,12 @@ public:
 	void clear();
 	void home();
 	void setCursor(uint8_t, uint8_t);
-	uint8_t cursorRow() { return currow; }
-	uint8_t cursorColumn() { return curcol; }
+	uint8_t cursorRow() {
+		return currow;
+	}
+	uint8_t cursorColumn() {
+		return curcol;
+	}
 
 	void brightness(int level);
 	void backlightOn(int val = 100) {

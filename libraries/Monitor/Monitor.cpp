@@ -7,14 +7,15 @@
 
 #include "Monitor.h"
 
-void Monitor::printBytes(const byte * a, const int length, const char gap, byte base) {
+void Monitor::printBytes(const byte * a, const int length, const char gap,
+		byte base) {
 
-	for (int i = 0; i < length; ) {
-		switch(base) {
+	for (int i = 0; i < length;) {
+		switch (base) {
 		case HEX:
-		print(a[i]>>4, HEX);
-		print(a[i]&0x0f, HEX);
-		break;
+			print(a[i] >> 4, HEX);
+			print(a[i] & 0x0f, HEX);
+			break;
 		case BIN:
 			print(a[i], BIN);
 			break;
@@ -23,14 +24,14 @@ void Monitor::printBytes(const byte * a, const int length, const char gap, byte 
 			break;
 		}
 		i++;
-		if ( gap && i < length)
+		if (gap && i < length)
 			print(gap);
 	}
 	return;
 }
 
 void Monitor::printBytes(const char * s, const int length, const char gap) {
-	for (int i = 0; i < length; ) {
+	for (int i = 0; i < length;) {
 		if (isprint(s[i]))
 			print(s[i]);
 		else {
@@ -38,18 +39,18 @@ void Monitor::printBytes(const char * s, const int length, const char gap) {
 			print((byte) s[i], HEX);
 		}
 		i++;
-		if ( gap && i < length)
+		if (gap && i < length)
 			print(gap);
 	}
 	return;
 }
 
 void Monitor::printWords(const word * a, const int length, const char gap) {
-	for (int i = 0; i < length; ) {
-		printHex(a[i]>>8);
+	for (int i = 0; i < length;) {
+		printHex(a[i] >> 8);
 		printHex(a[i]);
 		i++;
-		if ( gap && i < length)
+		if (gap && i < length)
 			print(gap);
 	}
 	return;
@@ -90,16 +91,18 @@ word Monitor::readToken(char buf[], long timeout) {
 }
 
 int Monitor::ithToken(const char buf[], const int item, int & fromix) {
-    int tc, tend;
-    for(tc = 0, tend = 0, fromix = 0; buf[fromix] ; tc++) {
-      for (fromix = tend; buf[fromix] ; fromix++)
-        if ( !isspace(buf[fromix]) ) break;
-      for (tend = fromix; buf[tend] ; tend++)
-        if ( isspace(buf[tend]) ) break;
-      if ( item == tc )
-    	  break;
-    }
-    return tend - fromix;
+	int tc, tend;
+	for (tc = 0, tend = 0, fromix = 0; buf[fromix]; tc++) {
+		for (fromix = tend; buf[fromix]; fromix++)
+			if (!isspace(buf[fromix]))
+				break;
+		for (tend = fromix; buf[tend]; tend++)
+			if (isspace(buf[tend]))
+				break;
+		if (item == tc)
+			break;
+	}
+	return tend - fromix;
 }
 
 boolean Monitor::readLine(char buf[], int maxlen, long wait) {
@@ -108,15 +111,15 @@ boolean Monitor::readLine(char buf[], int maxlen, long wait) {
 	byte c;
 	boolean lineEnded = false;
 
-	while ( available() ) {
+	while (available()) {
 		c = read();
-		if (iscntrl((char)c) ) {
+		if (iscntrl((char) c)) {
 			lineEnded = true;
 			break;
 		}
-		if ( bp < maxlen )
+		if (bp < maxlen)
 			buf[bp++] = c;
-		if ( millis() > wait + msec ) {
+		if (millis() > wait + msec) {
 			break;
 		}
 	}
@@ -130,20 +133,21 @@ boolean Monitor::concatenateLine(char buf[], int maxlen, long wait) {
 	byte c;
 	boolean lineEnded = false;
 
-	while ( buf[bp] != 0 ) bp++;
-	while ( available() ) {
+	while (buf[bp] != 0)
+		bp++;
+	while (available()) {
 		c = read();
-		if (iscntrl((char)c) ) {
+		if (iscntrl((char) c)) {
 			lineEnded = true;
 			break;
 		}
-		if ( bp < maxlen )
+		if (bp < maxlen)
 			buf[bp++] = c;
 		else {
 			lineEnded = true;
 			break;
 		}
-		if ( millis() > wait + msec ) {
+		if (millis() > wait + msec) {
 			break;
 		}
 	}

@@ -18,7 +18,7 @@
  */
 #include <EEPROM.h>
 #include <SPI.h>
-#include <Ethernet_SPI.h>
+#include <Ethernet_W5100.h>
 #include "Monitor.h"
 
 // Enter a MAC address and IP address for your controller below.

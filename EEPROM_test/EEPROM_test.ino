@@ -1,55 +1,59 @@
 #include <EEPROM.h>
-
 #include "Monitor.h"
-
-struct Date {
-  word year;
-  byte month, day;
-  byte xsum;
-};
 
 Monitor mon(Serial);
 
 void setup() {
-  Date today = {2011, 3, 20, 0xff};
-  Date anotherday  = {1976, 5, 27, 0xff};
-  byte chksum;
-  Serial.begin(19200);
-  mon << endl 
-    << today.year << "/" << (int) today.month << "/" << (int) today.day << 
-    endl << "check sum: " << (int) today.xsum << endl;
-  chksum = write_date(anotherday);
-  mon << "chk: " << (int) chksum << endl;
-  chksum = read_date(today);
-  mon << endl 
-    << today.year << "/" << (int) today.month << "/" << (int) today.day << 
-    endl << "check sum: " << (int) chksum << endl;
+  Serial.begin(9600);
+  mon << "writing to EEPROM..." << endl;
+  //
+  byte mac[] = { 0x00, 0x50, 0xc2, 0x97, 0x21, 0x73 };
+  byte ip[] = {192, 168, 1, 177};
+  byte mask[] = { 255, 255, 255, 0 };
+  byte gtway[] = { 192, 168, 1, 1 };
+  byte magic[] = { 0x9e, 'I' };
+  //
+  int addr = 0;
+  addr += EEPROM_write(addr, magic, 2);
+  addr += EEPROM_write(addr, mac, 6);
+  addr += EEPROM_write(addr, ip, 4);
+  addr += EEPROM_write(addr, mask, 4);
+  addr += EEPROM_write(addr, gtway, 4);
+  //
+  byte buf[8];
+  addr = 0;
+  addr += EEPROM_read(addr, buf, 2);
+  mon.printBytes(buf, 2);
+  mon << endl;
+  addr += EEPROM_read(addr, buf, 6);
+  mon.printBytes(buf, 6);
+  mon << endl;
+  addr += EEPROM_read(addr, buf, 4);
+  mon.printBytes(buf, 4, '.', DEC);
+  mon << endl;
+  addr += EEPROM_read(addr, buf, 4);
+  mon.printBytes(buf, 4, '.', DEC);
+  mon << endl;
+  addr += EEPROM_read(addr, buf, 4);
+  mon.printBytes(buf, 4, '.', DEC);
+  mon << endl;
 }
 
 void loop() {
 }
 
-byte read_date(struct Date & d ) {
-  byte * ptr = (byte*)&d;
-  byte c = 0;
-  for(int addr = 0; addr < sizeof(Date); addr++, ptr++) {
-    *ptr = EEPROM.read(addr);
-    c ^= *ptr;
-    mon << (int)c << endl;
+int EEPROM_read(int addr, byte * ptr, int n) {
+  for(int i = 0 ; i < n; i++, ptr++) {
+    *ptr = EEPROM.read(addr+i);
   }
-  return c;
+  return n;
 }
 
-byte write_date(struct Date d ) {
-  byte * ptr = (byte*)&d;
-  byte c = 0;
-  int addr;
-  for(addr = 0; addr < sizeof(Date) - 1; addr++, ptr++) {
-    EEPROM.write(addr,*ptr);
-    c ^= *ptr;
+int EEPROM_write(int addr, byte * ptr, int n) {
+  for(int i = 0 ; i < n; i++, ptr++) {
+    EEPROM.write(addr+i, *ptr);
   }
-  EEPROM.write(addr,c);
-  return c;
+  return n;
 }
 
 
