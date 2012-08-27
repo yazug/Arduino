@@ -47,7 +47,7 @@
   Dirk Spaanderman: changed the dataflash code to a c++ library for arduino
 */
 
-#include "SPI.h"
+#include <SPI/SPI.h>
 #include "DataFlash.h"
 
 
@@ -61,7 +61,8 @@ DataFlash::DataFlash(byte id) {
 bool DataFlash::init(void) {
 	byte stat;
 	
-	SPI.setSlave(chipID); // set pinMode and disable device
+	pinMode(chipID, OUTPUT); // set pinMode and disable device
+	digitalWrite(chipID, HIGH);
 	//interrupt disabled,spi enabled,msb 1st,master,clk low when idle,
 	//sample on leading edge of clk,system clock/4 rate (fastest)
 	//SPI.begin( 3, 1);
@@ -90,7 +91,7 @@ unsigned char DataFlash::ReadStatusRegister (void) {
 //	deselect();				//make sure to toggle CS signal in order
 	select();				//to reset DataFlash command decoder
 	result = SPI.transfer(StatusRegisterRead);
-	result = SPI.transfer();
+	result = SPI.transfer(0);
 	deselect();				//make sure to toggle CS signal in order
 	return result;				//return the read status register value
 }
@@ -100,7 +101,7 @@ void DataFlash::reset() {
 }
 
 
-byte DataFlash::read(unsigned long addr) {
+int DataFlash::read(unsigned long addr) {
 	unsigned int pageAddr;
 	unsigned int byteAddr;
 	byte bufsel;
@@ -117,13 +118,13 @@ byte DataFlash::read(unsigned long addr) {
 	return BufferRead(byteAddr, bufsel);
 }
 
-byte DataFlash::read() {
+int DataFlash::read() {
 	return read(readpointer++);
 }
 
 //
 
-void DataFlash::write(byte b, unsigned long addr) {
+size_t DataFlash::write(byte b, unsigned long addr) {
 	unsigned int pageAddr;
 	unsigned int byteAddr;
 	byte bufsel;
@@ -133,7 +134,7 @@ void DataFlash::write(byte b, unsigned long addr) {
 	bufsel = pageAddr & 0x01;
 	if ( cached[bufsel] && (cachedPage[bufsel] == pageAddr) ) {
 		BufferWrite(byteAddr, b, bufsel);
-		return;
+		return 1;
 	}
 	if ( !cached[bufsel] ) {
 		PageToBufferTransfer( pageAddr, bufsel );
@@ -147,10 +148,11 @@ void DataFlash::write(byte b, unsigned long addr) {
 		cachedPage[bufsel] = pageAddr;
 	}
 	BufferWrite(byteAddr, b, bufsel);
+	return 1;
 }
 
-void DataFlash::write(byte b) {
-	write(b, writepointer++);
+size_t DataFlash::write(byte b) {
+	return write(b, writepointer++);
 }
 
 void DataFlash::flush() {
@@ -192,7 +194,7 @@ void DataFlash::PageToBufferTransfer (unsigned int addr, byte bufsel) {
 	}
 	SPI.transfer( (unsigned char)(addr >> (16 - pageAddressBits))); //DF_SPI_RW((unsigned char)(PageAdr >> (16 - pageAddressBits)));	//upper part of page address
     SPI.transfer( (unsigned char)(addr << (pageAddressBits - 8)));	//DF_SPI_RW//lower part of page address
-	SPI.transfer(); //DF_SPI_RW(0x00);						//don't cares
+	SPI.transfer(0); //DF_SPI_RW(0x00);						//don't cares
 
 	deselect();		//initiate the transfer
 	select();
@@ -332,7 +334,7 @@ void DataFlash::BufferWrite (unsigned int IntPageAdr, byte data, byte bufsel) {
 	} else {
 		SPI.transfer(Buffer1Write); //buffer 1 write op-code
 	}
-	SPI.transfer();	// DF_SPI_RW(0x00);				//don't cares
+	SPI.transfer(0);	// DF_SPI_RW(0x00);				//don't cares
 	  SPI.transfer((byte)(IntPageAdr>>8)); //  DF_SPI_RW((unsigned char)(IntPageAdr>>8));//upper part of internal buffer address
 	  SPI.transfer((byte)(IntPageAdr)); // DF_SPI_RW((unsigned char)(IntPageAdr));	//lower part of internal buffer address
 	  SPI.transfer(data); //DF_SPI_RW(Data);				//write data byte
@@ -465,13 +467,13 @@ void DataFlash::ContinuousArrayRead(unsigned long addr, byte array[], byte stopc
 	SPI.transfer((byte)(addr >> 16 - addr));			//upper part of page address
 	SPI.transfer((byte)(addr >> 8));	//lower part of page address and MSB of int.page adr.
 	SPI.transfer((byte)(addr));										//LSB byte of internal page address
-	SPI.transfer();															//perform 4 dummy writes
-	SPI.transfer();															//in order to intiate DataFlash
-	SPI.transfer();															//address pointers
-	SPI.transfer();
+	SPI.transfer(0);															//perform 4 dummy writes
+	SPI.transfer(0);															//in order to intiate DataFlash
+	SPI.transfer(0);															//address pointers
+	SPI.transfer(0);
 	
 	for (i = 0; i < sizeof(array); i++) {
-		*ptr = SPI.transfer();
+		*ptr = SPI.transfer(0);
 		if ( stopEnable && *ptr == stopchar )
 			break;
 		ptr++;
@@ -548,18 +550,18 @@ void DataFlash::Page_Erase (unsigned int PageAdr)
 
 bool DataFlash::notBusy() {
 	SPI.transfer(StatusRegisterRead);
-	return SPI.transfer() & Status_RDYBUSY;
+	return SPI.transfer(0) & Status_RDYBUSY;
 }
 
 byte DataFlash::status() {
 	SPI.transfer(StatusRegisterRead);
-	return SPI.transfer();
+	return SPI.transfer(0);
 }
 
 void DataFlash::deselect() {
-	SPI.deselect(chipID);
+	digitalWrite(chipID, HIGH);
 }
 
 void DataFlash::select() {
-	SPI.select(chipID);
+	digitalWrite(chipID, LOW);
 }

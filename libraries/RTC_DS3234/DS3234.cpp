@@ -1,4 +1,3 @@
-#include <SPI.h>
 #include "DS3234.h"
 
 

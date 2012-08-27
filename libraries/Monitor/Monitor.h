@@ -49,12 +49,13 @@ public:
 		write('0'+(b&0x0f));
 	}
 
-	void printHex(const byte * a, const int length, char gap = ' ');
-	void printHex(const char * s, const int length, char gap = 0x00);
-	void printHex(const word * a, const int length, char gap = ' ');
+	void printBytes(const byte * a, const int length, char gap = ' ', byte base = HEX);
+	void printBytes(const char * s, const int length, char gap = 0x00);
+	void printWords(const word * a, const int length, char gap = ' ');
 
 	word readToken(char buf[], long timeout = 200);
 	boolean readLine(char buf[], int maxlen, long wait = 10);
+	boolean concatenateLine(char buf[], int maxlen, long wait = 10);
 
 	static int ithToken(const char buf[], const int item, int & fromindex);
 };

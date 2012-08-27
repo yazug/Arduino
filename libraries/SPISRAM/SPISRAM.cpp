@@ -8,7 +8,11 @@
  */
 
 #include <Arduino.h>
+#ifdef NON_ARDUINO_IDE
+#include <SPI/SPI.h>
+#else
 #include <SPI.h>
+#endif
 #include "SPISRAM.h"
 
 SPISRAM::SPISRAM(byte ncsPin) :

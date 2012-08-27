@@ -1,6 +1,6 @@
 #include <SPI.h>
 #include <EEPROM.h>
-#include "Ethernet_SPI.h"
+#include "Ethernet_w5100.h"
 #include "DS3234.h"
 #include "Wire.h"
 #include "PN532_I2C.h"
@@ -88,7 +88,7 @@ void setup() {
 
   Wire.begin();
   nfc.begin();
-  PN532_init();
+  PN532_setup();
 
   card.clear();
   cardlog.init();
@@ -195,7 +195,7 @@ void loop() {
       if ( nfc.felica_ReadBlocksWithoutEncryption(buf, 0x1a8b, (byte) 4, blklist) ) {
         IDCardData & idcard((IDCardData &) buf);
         mon << "PIN ";
-        mon.printHex(idcard.felica.pin, 8);
+        mon.printBytes(idcard.felica.pin, 8);
         mon << " ISSUE " << idcard.felica.issue << endl;
         cardlog.add(rtc_spi.cal, rtc_spi.time, card.type, card.IDm, idcard.felica.pin);
         //mon << cardlog.count() << endl;
@@ -205,7 +205,7 @@ void loop() {
       if ( nfc.mifare_ReadDataBlock(4, buf) ) {
         IDCardData & idcard((IDCardData &) buf);
         mon << "PIN ";
-        mon.printHex(idcard.mifare.pin, 8);
+        mon.printBytes(idcard.mifare.pin, 8);
         mon << " ISSUE " << idcard.mifare.issue << endl;
         cardlog.add(rtc_spi.cal, rtc_spi.time, card.type, card.UID, idcard.felica.pin);
         //mon << cardlog.count() << endl;
@@ -244,17 +244,11 @@ void loop() {
           len = min(len, 8);
           if ( len > 0 && strncmp((char*)buf+pos,"INFO", len) == 0 ) {
             cmon << "INFO >> ";
-            cmon.printHex(mac, 6);
+            cmon.printBytes(mac, 6);
             cmon << ", ";
             long ipval = (unsigned long)ip;
-            cmon.print(ipval & 0xff);
-            cmon.print('.');
-            cmon.print(ipval>>8 & 0xff);
-            cmon.print('.');
-            cmon.print(ipval>>16 & 0xff);
-            cmon.print('.');
-            cmon.print(ipval>>24 & 0xff);
-            cmon << endl;
+            cmon << (ipval & 0xff) << '.' << (ipval>>8 & 0xff) << '.' 
+              << (ipval>>16 & 0xff) <<'.' << (ipval>>24 & 0xff) << endl;
             //
           } 
           else if ( len > 0 && strncmp((char*)buf+pos, "TIME", len) == 0 ) {
@@ -336,9 +330,9 @@ void loop() {
       cmon << " ";
       cmon.print(cardlog[listix].type, HEX);
       cmon << " ";
-      cmon.printHex(cardlog[listix].NFCID, 8, '-');
+      cmon.printBytes(cardlog[listix].NFCID, 8, '-');
       cmon << " ";
-      cmon.printHex(cardlog[listix].PIN, 8);
+      cmon.printBytes(cardlog[listix].PIN, 8);
       cmon << endl;
     }
     if ( !(listix < cardlog.count()) )
@@ -355,7 +349,7 @@ void rom_macaddr() {
   }
 }
 
-boolean PN532_init() {
+boolean PN532_setup() {
   byte cnt = 0;
   for (int i = 0; i < 3  && !( nfc.GetFirmwareVersion() && (cnt = nfc.getCommandResponse((byte*)buf)) ); i++) 
     delay(500);

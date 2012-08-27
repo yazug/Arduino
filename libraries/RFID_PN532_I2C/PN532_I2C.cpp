@@ -5,7 +5,7 @@
  *      Author: sin
  */
 
-#include <Wire.h>
+//#include <Wire.h>
 #include "PN532_I2C.h"
 
 //#define PN532DEBUG

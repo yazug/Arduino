@@ -26,9 +26,9 @@
  * bjoern@cs.stanford.edu 12/30/2008
  */
 
-#include "w5100.h"
-#include "socket.h"
-#include "Ethernet_SPI.h"
+#include "utility/w5100.h"
+#include "utility/socket.h"
+#include "Ethernet_w5100.h"
 #include "Udp.h"
 #include "Dns.h"
 

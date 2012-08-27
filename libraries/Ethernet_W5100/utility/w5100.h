@@ -12,7 +12,11 @@
 
 #include <Arduino.h>
 #include <avr/pgmspace.h>
+#ifdef NON_ARDUINO_IDE
+#include <SPI/SPI.h>
+#else
 #include <SPI.h>
+#endif
 
 #define MAX_SOCK_NUM 4
 

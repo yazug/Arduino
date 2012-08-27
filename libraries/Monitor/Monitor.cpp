@@ -7,10 +7,21 @@
 
 #include "Monitor.h"
 
-void Monitor::printHex(const byte * a, const int length, const char gap) {
+void Monitor::printBytes(const byte * a, const int length, const char gap, byte base) {
+
 	for (int i = 0; i < length; ) {
+		switch(base) {
+		case HEX:
 		print(a[i]>>4, HEX);
 		print(a[i]&0x0f, HEX);
+		break;
+		case BIN:
+			print(a[i], BIN);
+			break;
+		default:
+			print(a[i], DEC);
+			break;
+		}
 		i++;
 		if ( gap && i < length)
 			print(gap);
@@ -18,7 +29,7 @@ void Monitor::printHex(const byte * a, const int length, const char gap) {
 	return;
 }
 
-void Monitor::printHex(const char * s, const int length, const char gap) {
+void Monitor::printBytes(const char * s, const int length, const char gap) {
 	for (int i = 0; i < length; ) {
 		if (isprint(s[i]))
 			print(s[i]);
@@ -33,7 +44,7 @@ void Monitor::printHex(const char * s, const int length, const char gap) {
 	return;
 }
 
-void Monitor::printHex(const word * a, const int length, const char gap) {
+void Monitor::printWords(const word * a, const int length, const char gap) {
 	for (int i = 0; i < length; ) {
 		printHex(a[i]>>8);
 		printHex(a[i]);
@@ -97,13 +108,41 @@ boolean Monitor::readLine(char buf[], int maxlen, long wait) {
 	byte c;
 	boolean lineEnded = false;
 
-	while (available() && bp < maxlen) {
+	while ( available() ) {
 		c = read();
 		if (iscntrl((char)c) ) {
 			lineEnded = true;
 			break;
 		}
-		buf[bp++] = c;
+		if ( bp < maxlen )
+			buf[bp++] = c;
+		if ( millis() > wait + msec ) {
+			break;
+		}
+	}
+	buf[bp] = 0;
+	return lineEnded;
+}
+
+boolean Monitor::concatenateLine(char buf[], int maxlen, long wait) {
+	long msec = millis();
+	int bp = 0;
+	byte c;
+	boolean lineEnded = false;
+
+	while ( buf[bp] != 0 ) bp++;
+	while ( available() ) {
+		c = read();
+		if (iscntrl((char)c) ) {
+			lineEnded = true;
+			break;
+		}
+		if ( bp < maxlen )
+			buf[bp++] = c;
+		else {
+			lineEnded = true;
+			break;
+		}
 		if ( millis() > wait + msec ) {
 			break;
 		}

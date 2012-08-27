@@ -31,6 +31,7 @@
 ///#ifndef __DATAFLASH_INCLUDED
 //#define __DATAFLASH_INCLUDED
 
+#include <Arduino.h>
 #include <Print.h>
 
 //Dataflash opcodes
@@ -104,13 +105,13 @@ Read Security Register 77H
 
 
 #include <inttypes.h>
-#include <WProgram.h>
+#include <Arduino.h>
 #include <avr/pgmspace.h>
 
 
 #define Status_RDYBUSY 0x80
 
-class DataFlash : Print {
+class DataFlash : Stream {
 	byte chipID;
 	unsigned int bytesPerPage;
 	unsigned int pageAddressBits;
@@ -131,6 +132,7 @@ private:
 	
 public:
 	DataFlash(byte);
+	~DataFlash() {}
 	bool init(void);
 	byte status();
 
@@ -147,10 +149,10 @@ public:
 	void ContinuousArrayRead(unsigned long addr, byte array[]) { ContinuousArrayRead(addr, array, 0, false); }
 	
 	void reset();
-	byte read();
-	byte read(unsigned long address );
-	void write(byte b);
-	void write(byte b, unsigned long addr);
+	virtual int read();
+	virtual int read(unsigned long address );
+	virtual size_t write(byte b);
+	virtual size_t write(byte b, unsigned long addr);
 	void flush();
 	
 	void Page_Erase (unsigned int PageAdr); 
