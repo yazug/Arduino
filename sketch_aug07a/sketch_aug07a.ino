@@ -1,7 +1,6 @@
 #include "Monitor.h"
 
-char tmp[32];
-Monitor mon(Serial, tmp);
+Monitor mon(Serial);
 
 void setup() {
   Serial.begin(9600);
@@ -9,11 +8,17 @@ void setup() {
   mon << "hi. " << endl;
   mon << 23 << endl;
   mon.print((word)112);
-  mon << 'h' << endl;
-  mon.print((unsigned long)112) << 'h' << endl;
-  mon.print((byte*) "Iizuka ?", 9) << endl;
+  mon << endl;
+  long val = 112;
+  mon.printBytes((byte*)&val, 4);
+  mon << endl;
+  mon.print(val, HEX);
+  mon << endl;
+  mon.printBytes((byte*) "Iizuka ?", 9);
+ mon << endl;
 }
 
 void loop() {
 }
+
 

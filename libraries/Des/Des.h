@@ -190,7 +190,7 @@ public:
 	  if ( n > 0 ) {
 		  for(int blk = 0; blk < (n>>3) ; blk++ ) {
 			  ecb_decrypt(buf+(blk*8), t);
-			  memcpy(t, buf+(blk*8), 8);
+			  memcpy(buf+(blk*8), t, 8);
 		  }
 	  }
   }

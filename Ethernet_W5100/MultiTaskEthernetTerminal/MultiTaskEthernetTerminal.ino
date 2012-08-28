@@ -55,7 +55,7 @@ DS3234 rtc_spi(9);
 long lastrtcupdate;
 
 /*
-const int SD_CS = 4;    
+const int SD_CS = 4;
 SDClass sd(SD_CS);
 SdVolume volume;
 SdFile root;

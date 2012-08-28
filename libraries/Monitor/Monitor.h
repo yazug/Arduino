@@ -30,6 +30,8 @@ class Monitor : public Stream {
 	Stream & stream;
 //	char * sbuf;
 
+	void printHex(const byte b);
+
 public:
     virtual inline size_t write(uint8_t b) { return stream.write(b); }
     using Print::write;
@@ -44,14 +46,11 @@ public:
 
 	using Print::print;
 
-	void printHex(const byte b) {
-		write('0'+(b>>4));
-		write('0'+(b&0x0f));
-	}
-
 	void printBytes(const byte * a, const int length, char gap = ' ', byte base = HEX);
 	void printBytes(const char * s, const int length, char gap = 0x00);
 	void printWords(const word * a, const int length, char gap = ' ');
+
+	byte * scanBytes(byte * str, const int len, const byte base = HEX);
 
 	word readToken(char buf[], long timeout = 200);
 	boolean readLine(char buf[], int maxlen, long wait = 10);

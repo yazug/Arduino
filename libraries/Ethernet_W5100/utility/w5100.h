@@ -15,7 +15,7 @@
 #ifdef NON_ARDUINO_IDE
 #include <SPI/SPI.h>
 #else
-#include <SPI.h>
+#include "SPI.h"
 #endif
 
 #define MAX_SOCK_NUM 4
@@ -348,7 +348,7 @@ private:
 #endif
 */
   inline static void initSS() { pinMode(SS, OUTPUT); digitalWrite(SS, HIGH); }
-  inline static void setSS() { SPI.setBitOrder(MSBFIRST); SPI.setDataMode(SPI_MODE0); SPI.setClockDivider(SPI_CLOCK_DIV8); digitalWrite(SS, LOW); }
+  inline static void setSS() { SPI.setBitOrder(MSBFIRST); SPI.setDataMode(SPI_MODE0); SPI.setClockDivider(SPI_CLOCK_DIV16); digitalWrite(SS, LOW); }
   inline static void resetSS() { digitalWrite(SS, HIGH); }
 };
 

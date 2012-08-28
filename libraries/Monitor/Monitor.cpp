@@ -7,14 +7,18 @@
 
 #include "Monitor.h"
 
+void Monitor::printHex(const byte b) {
+	write( ((b & 0xf0) < 0xa0 ? '0' : 'A'-10 ) + (b>>4) );
+	write( ((b & 0x0f) < 0x0a ? '0' : 'A'-10 ) + (b&0x0f) );
+}
+
 void Monitor::printBytes(const byte * a, const int length, const char gap,
 		byte base) {
 
 	for (int i = 0; i < length;) {
 		switch (base) {
 		case HEX:
-			print(a[i] >> 4, HEX);
-			print(a[i] & 0x0f, HEX);
+			printHex(a[i]);
 			break;
 		case BIN:
 			print(a[i], BIN);
@@ -66,6 +70,29 @@ void Monitor::printWords(const word * a, const int length, const char gap) {
  return sbuf;
  }
  */
+
+byte * Monitor::scanBytes(byte * str, const int len, const byte base) {
+	char c;
+	byte val = 0;
+	for(int i = 0; i < len; i++) {
+		c = str[i<<1];
+		if ( c & 0x40 ) {
+			val = (c & 0x4f) - 'A' + 10;
+		} else {
+			val = c - '0';
+		}
+		val <<= 4;
+		c = str[(i<<1)+1];
+		if ( c & 0x40 ) {
+			val |= (c & 0x4f) - 'A' + 10;
+		} else {
+			val |= c - '0';
+		}
+		str[i] = val;
+	}
+	return str;
+}
+
 
 word Monitor::readToken(char buf[], long timeout) {
 	long msec = millis();
@@ -133,24 +160,28 @@ boolean Monitor::concatenateLine(char buf[], int maxlen, long wait) {
 	byte c;
 	boolean lineEnded = false;
 
-	while (buf[bp] != 0)
+	while (buf[bp] != 0 && bp < maxlen)
 		bp++;
-	while (available()) {
+	while (available() && bp < maxlen) {
 		c = read();
 		if (iscntrl((char) c)) {
+			//Serial.print(" * ");
 			lineEnded = true;
 			break;
 		}
-		if (bp < maxlen)
-			buf[bp++] = c;
-		else {
+		buf[bp++] = c;
+		if ( !(bp < maxlen) )
 			lineEnded = true;
-			break;
-		}
 		if (millis() > wait + msec) {
 			break;
 		}
 	}
+	/*
+	Serial.print("bp = ");
+	Serial.println(bp);
+	Serial.print("maxlen = ");
+	Serial.println(maxlen);
+	*/
 	buf[bp] = 0;
 	return lineEnded;
 }
