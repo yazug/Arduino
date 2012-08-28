@@ -5,7 +5,7 @@
 #include "Wire.h"
 #include "PN532_I2C.h"
 #include "ISO14443.h"
-#include "SD_SPI.h"
+//#include "SD_SPI.h"
 #include "SPISRAM.h"
 
 #include "Des.h"
@@ -54,11 +54,12 @@ int listix;
 DS3234 rtc_spi(9);
 long lastrtcupdate;
 
+/*
 const int SD_CS = 4;    
 SDClass sd(SD_CS);
 SdVolume volume;
 SdFile root;
-
+*/
 const int SRAM_CS = 8;
 SPISRAM spisram(SRAM_CS);
 
@@ -80,10 +81,11 @@ void setup() {
   }
 
   SPI.begin();
-
+/*
   if (!sd.begin()) {
     mon << "SD Card initialization failed." << endl;
   }
+  */
   spisram.begin();
 
   rtc_spi.begin();

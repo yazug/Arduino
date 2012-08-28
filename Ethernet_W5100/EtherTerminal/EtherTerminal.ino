@@ -18,9 +18,12 @@
  */
 #include <EEPROM.h>
 #include <SPI.h>
-#include <Ethernet_W5100.h>
+#include <Ethernet_w5100.h>
+#include "SD_SPI.h"
 #include "Monitor.h"
+#include "Des.h"
 
+Des codec;
 // Enter a MAC address and IP address for your controller below.
 // The IP address will be dependent on your local network.
 // gateway and subnet are optional:
@@ -32,23 +35,21 @@ IPAddress subnet(255, 255, 255, 0);
 
 
 // telnet defaults to port 23
-EthernetServer server(1234);
-boolean alreadyConnected = false; // whether or not the client was connected previously
+EthernetServer authServer(5963);
+EthernetServer commandServer(7602);
+boolean authConnected = false; // whether or not the client was connected previously
+boolean commConnected = false;
+
+//SDClass SD(4);
 
 void setup() {
-    pinMode(8, OUTPUT);
-  digitalWrite(8, HIGH);
-  pinMode(9, OUTPUT);
-  digitalWrite(9, HIGH);
   pinMode(4, OUTPUT);
   digitalWrite(4, HIGH);
-
   SPI.begin();
+  //  SD.begin();
   // initialize the ethernet device
-  get_rommacaddr(mac);
   Ethernet.begin(mac, ip, gateway, subnet);
   // start listening for clients
-  server.begin();
 
   // Open serial communications and wait for port to open:
   Serial.begin(9600);
@@ -56,60 +57,52 @@ void setup() {
     ; // wait for serial port to connect. Needed for Leonardo only
   }
 
-  Serial.print("Chat server address:");
+  Serial.print("Terminal address:");
   Serial.println(Ethernet.localIP());
+  authServer.begin();
+
+  codec.key_set((byte*)"\x12\x12\x12\x12\x12\x12\x12\x12");
+
 }
 
 void loop() {
   // wait for a new client:
-  EthernetClient client = server.available();
+  EthernetClient client = (!commConnected ? authServer.available() : client = commandServer.available() );  
+  Monitor climon(client);
+  char buf[128] = {
+    0  };
 
   // when the client sends the first byte, say hello:
   if (client) {
-    if (!alreadyConnected) {
+    if (!authConnected) {
       // clear out the input buffer:
       client.flush();
       Serial.println("We have a new client");
       client.println("Hello, client!"); 
-      alreadyConnected = true;
+      authConnected = true;
     } 
     else 
       if ( client.connected() && client.available() > 0) {
       // read the bytes incoming from the client:
-      char buf[128];
-      int pos = 0;
-      boolean lineEnded = false;
-      char c;
-      while ( (c = client.read()) > 0 ) {
-        if ( iscntrl(c) ) {
-          lineEnded = true;
-          break;
-        }
-        buf[pos++] = c;
-      }
-      buf[pos] = 0;
-      if ( lineEnded && pos > 0) {
-        // echo the bytes back to the client:
-        server.println(buf);
+      if ( climon.concatenateLine(buf, 127) ) {
+        authServer.println(buf);
         // echo the bytes to the server as well:
-        Serial.println(buf);
+        codec.ecb_encrypt(buf, 8);
+        climon.printBytes(buf, 8);
+        climon << endl;
+//        Serial.println(buf);
         if ( strcmp(buf, "quit.") == 0 ) {
           client.stop();
-          alreadyConnected = false;
+          authConnected = false;
         }
+        buf[0] = 0;
       }
     }
   }
 }
 
 
-void get_rommacaddr(byte * macaddr) {
-  if ( EEPROM.read(0) == 0x9e && EEPROM.read(1) ) {
-    for(int i = 0; i < 6; i++) {
-      macaddr[i] = EEPROM.read(2+i);
-    }
-  }
-}
+
 
 
 
