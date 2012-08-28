@@ -49,7 +49,7 @@ PROGMEM static const prog_uint32_t sbox8[64];
   uint32_t decrypt_subkeys[32];
   
 
-public:
+private:
   /*
    * des_key_schedule():	  Calculate 16 subkeys pairs (even/odd) for
    *			  16 encryption rounds.
@@ -160,17 +160,40 @@ data[4] = (right >> 24) &0xff; data[5] = (right >> 16) &0xff;  \
 data[6] = (right >> 8) &0xff; data[7] = right &0xff;
 
 
-	Des();
-  Des(const byte * k);
-	
   static void key_schedule (const byte * _rawkey, uint32_t * subkey); 
-  void key_set(const byte * key);
   unsigned long subkey(int i, boolean mode);
   unsigned long encrypt_subkey(int i);
   unsigned long decrypt_subkey(int i);
+
+public:
+  Des();
+  Des(const byte * k);
+
+  void key_set(const byte * key);
   void ecb_crypt(const char *, char *, int);
   void ecb_encrypt(const char * f, char * t) { return ecb_crypt(f,t,0); }
   void ecb_decrypt(const char * f, char * t) { return ecb_crypt(f,t,1); }
+
+  void ecb_encrypt(char * buf, int n, char fill = 0x20) {
+	  char t[8];
+	  if ( n == 0 )
+	  	  return;
+	  for(int i = 0; i < n ; i += 8 ) {
+		  memset(t, fill, 8);
+		  memcpy(t, buf+i, n - i);
+		  ecb_encrypt(t, buf+i);
+	  }
+  }
+
+  void ecb_decrypt(char * buf, int n) {
+	  char t[8];
+	  if ( n > 0 ) {
+		  for(int blk = 0; blk < (n>>3) ; blk++ ) {
+			  ecb_decrypt(buf+(blk*8), t);
+			  memcpy(t, buf+(blk*8), 8);
+		  }
+	  }
+  }
 
 };
 
