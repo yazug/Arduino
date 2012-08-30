@@ -1,35 +1,33 @@
 /*
-  SD card datalogger
+  SD card file dump
  
- This example shows how to log data from three analog sensors 
- to an SD card using the SD library.
+ This example shows how to read a file from the SD card using the
+ SD library and send it over the serial port.
  	
  The circuit:
- * analog sensors on analog ins 0, 1, and 2
  * SD card attached to SPI bus as follows:
  ** MOSI - pin 11
  ** MISO - pin 12
  ** CLK - pin 13
  ** CS - pin 4
  
- created  24 Nov 2010
+ created  22 December 2010
+ by Limor Fried
  modified 9 Apr 2012
  by Tom Igoe
  
- This example code is in the public domain.
- 	 
+ This example code is in the public domain. 	 
  */
 
 #include <SPI.h>
 #include <SD_SPI.h>
 
-// On the Ethernet Shield, CS is pin 4. Note that even if it's not
-// used as the CS pin, the hardware CS pin (10 on most Arduino boards,
-// 53 on the Mega) must be left as an output or the SD library
-// functions will not work.
+// On the Ethernet Shield, CS is pin 4. 
 const int chipSelect = 4;
 
 SDClass SD(chipSelect);
+
+const char * fnames[] = { "netintf.txt", "shcedule.txt", "keys.txt" };
 
 void setup()
 {
@@ -43,7 +41,7 @@ void setup()
   Serial.print("Initializing SD card...");
   // make sure that the default chip select pin is set to
   // output, even if you don't use it:
-  SPI.begin(); //pinMode(10, OUTPUT);
+SPI.begin();  //pinMode(10, OUTPUT);
   
   // see if the card is present and can be initialized:
   if (!SD.begin()) {
@@ -52,44 +50,32 @@ void setup()
     return;
   }
   Serial.println("card initialized.");
+  
+  // open the file. note that only one file can be open at a time,
+  // so you have to close this one before opening another.
+  File dataFile = SD.open(fnames[0]);
+
+  // if the file is available, write to it:
+  if (dataFile) {
+    
+    while (dataFile.available()) {
+      char c = dataFile.read();
+      if ( c == '\x0a' || c == '\x0d') {
+        Serial.println();
+      } else {
+        Serial.write(c);
+      }
+    }
+    dataFile.close();
+  }  
+  // if the file isn't open, pop up an error:
+  else {
+    Serial.print("error opening ");
+    Serial.println(fnames[0]);
+  } 
 }
 
 void loop()
 {
-  // make a string for assembling the data to log:
-  String dataString = "";
-
-  // read three sensors and append to the string:
-  for (int analogPin = 0; analogPin < 3; analogPin++) {
-    int sensor = analogRead(analogPin);
-    dataString += String(sensor);
-    if (analogPin < 2) {
-      dataString += ","; 
-    }
-  }
-
-  // open the file. note that only one file can be open at a time,
-  // so you have to close this one before opening another.
-  File dataFile = SD.open("datalog.txt", FILE_WRITE);
-
-  // if the file is available, write to it:
-  if (dataFile) {
-    dataFile.println(dataString);
-    dataFile.close();
-    // print to the serial port too:
-    Serial.println(dataString);
-  }  
-  // if the file isn't open, pop up an error:
-  else {
-    Serial.println("error opening datalog.txt");
-  } 
 }
-
-
-
-
-
-
-
-
 

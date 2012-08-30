@@ -1,12 +1,12 @@
 /*
- * Monitor.h
+ * TextStream.h
  *
  *  Created on: 2012/08/07
  *      Author: sin
  */
 
-#ifndef MONITOR_H_
-#define MONITOR_H_
+#ifndef TEXTSTREAM_H_
+#define TEXTSTREAM_H_
 
 #if ARDUINO >= 100
 #include <Arduino.h>
@@ -26,7 +26,7 @@ inline Stream &operator <<(Stream &stream, T arg) {
 	return stream;
 }
 
-class Monitor : public Stream {
+class TextStream : public Stream {
 	Stream & stream;
 //	char * sbuf;
 
@@ -41,8 +41,9 @@ public:
     virtual inline int peek() { return stream.peek(); }
     virtual void flush() { stream.flush(); }
 
-	Monitor(Stream & s) : stream(s) {
+    TextStream(Stream & s) : stream(s) {
 	}
+    ~TextStream() { }
 
 	using Print::print;
 
@@ -50,13 +51,15 @@ public:
 	void printBytes(const char * s, const int length, char gap = 0x00);
 	void printWords(const word * a, const int length, char gap = ' ');
 
-	byte * scanBytes(byte * str, const int len, const byte base = HEX);
+	int readToken(char buf[], long timeout = 200);
+	boolean readLine(char buf[], const int startidx, const int maxlen, const long wait = 10);
+	inline boolean readLine(char buf[], const int maxlen, const long wait = 10) {
+		return readLine(buf, 0 , maxlen, wait);
+	}
+	boolean concateLine(char buf[], const int maxlen, const long wait = 10);
 
-	word readToken(char buf[], long timeout = 200);
-	boolean readLine(char buf[], int maxlen, long wait = 10);
-	boolean concatenateLine(char buf[], int maxlen, long wait = 10);
-
+	static int scanBytes(char * str, byte * result, const int maxlen, const byte base = HEX);
 	static int ithToken(const char buf[], const int item, int & fromindex);
 };
 
-#endif /* MONITOR_H_ */
+#endif /* TEXTSTREAM_H_ */

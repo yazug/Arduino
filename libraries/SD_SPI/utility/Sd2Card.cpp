@@ -18,12 +18,9 @@
  * <http://www.gnu.org/licenses/>.
  */
 #include <Arduino.h>
-#ifdef NON_ARDUINO_IDE
-#include <SPI/SPI.h>
-#else
 #include <SPI.h>
-#endif
 #include "Sd2Card.h"
+
 //------------------------------------------------------------------------------
 #ifndef SOFTWARE_SPI
 // functions for hardware SPI

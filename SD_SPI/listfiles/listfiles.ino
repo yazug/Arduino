@@ -19,11 +19,11 @@
  */
 #include <SD.h>
 
-File myFile;
+File root;
 
 void setup()
 {
- // Open serial communications and wait for port to open:
+  // Open serial communications and wait for port to open:
   Serial.begin(9600);
    while (!Serial) {
     ; // wait for serial port to connect. Needed for Leonardo only
@@ -37,47 +37,46 @@ void setup()
   // or the SD library functions will not work. 
   pinMode(10, OUTPUT);
 
-  if (!SD.begin(4)) {
+  if (!SD.begin(10)) {
     Serial.println("initialization failed!");
     return;
   }
   Serial.println("initialization done.");
 
-  if (SD.exists("example.txt")) {
-    Serial.println("example.txt exists.");
-  }
-  else {
-    Serial.println("example.txt doesn't exist.");
-  }
-
-  // open a new file and immediately close it:
-  Serial.println("Creating example.txt...");
-  myFile = SD.open("example.txt", FILE_WRITE);
-  myFile.close();
-
-  // Check to see if the file exists: 
-  if (SD.exists("example.txt")) {
-    Serial.println("example.txt exists.");
-  }
-  else {
-    Serial.println("example.txt doesn't exist.");  
-  }
-
-  // delete the file:
-  Serial.println("Removing example.txt...");
-  SD.remove("example.txt");
-
-  if (SD.exists("example.txt")){ 
-    Serial.println("example.txt exists.");
-  }
-  else {
-    Serial.println("example.txt doesn't exist.");  
-  }
+  root = SD.open("/");
+  
+  printDirectory(root, 0);
+  
+  Serial.println("done!");
 }
 
 void loop()
 {
   // nothing happens after setup finishes.
+}
+
+void printDirectory(File dir, int numTabs) {
+   while(true) {
+     
+     File entry =  dir.openNextFile();
+     if (! entry) {
+       // no more files
+       //Serial.println("**nomorefiles**");
+       break;
+     }
+     for (uint8_t i=0; i<numTabs; i++) {
+       Serial.print('\t');
+     }
+     Serial.print(entry.name());
+     if (entry.isDirectory()) {
+       Serial.println("/");
+       printDirectory(entry, numTabs+1);
+     } else {
+       // files have sizes, directories do not
+       Serial.print("\t\t");
+       Serial.println(entry.size(), DEC);
+     }
+   }
 }
 
 

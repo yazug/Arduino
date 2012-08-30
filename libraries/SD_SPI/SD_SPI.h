@@ -16,11 +16,7 @@
 #define __SD_SPI_H__
 
 #include <Arduino.h>
-#ifdef NON_ARDUINO_IDE
-#include <SPI/SPI.h>
-#else
 #include <SPI.h>
-#endif
 
 #include "utility/SdFat.h"
 #include "utility/SdFatUtil.h"

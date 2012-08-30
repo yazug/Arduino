@@ -14,16 +14,16 @@
  */
 const int SRAM_CS = 10;
 
-SPISRAM myRAM(SRAM_CS); // CS pin
+SPISRAM myRAM(SRAM_CS, SPISRAM::BUS_MBits); // CS pin
 char buffer[128];
 
 void setup() {
-  pinMode(11, OUTPUT);
-  digitalWrite(11, HIGH);
+//  pinMode(11, OUTPUT);
+//  digitalWrite(11, HIGH);
   pinMode(4, OUTPUT);
   digitalWrite(4, HIGH);
   
-  Serial.begin(9600);
+  Serial.begin(57600);
   
   SPI.begin();
   myRAM.begin();

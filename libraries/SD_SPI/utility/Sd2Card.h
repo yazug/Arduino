@@ -25,11 +25,8 @@
  */
 //#include "Sd2PinMap.h"
 #include "SdInfo.h"
-#ifdef NON_ARDUINO_IDE
-#include <SPI/SPI.h>
-#else
 #include <SPI.h>
-#endif
+
 /** Set SCK to max rate of F_CPU/2. See Sd2Card::setSckRate(). */
 //uint8_t const SPI_FULL_SPEED = 0;
 /** Set SCK rate to F_CPU/4. See Sd2Card::setSckRate(). */

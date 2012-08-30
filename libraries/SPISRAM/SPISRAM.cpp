@@ -8,28 +8,28 @@
  */
 
 #include <Arduino.h>
-#ifdef NON_ARDUINO_IDE
-#include <SPI/SPI.h>
-#else
 #include <SPI.h>
-#endif
+
 #include "SPISRAM.h"
 
-SPISRAM::SPISRAM(byte ncsPin) :
-		_ncsPin(ncsPin) {
+SPISRAM::SPISRAM(const byte csPin, const byte addr_width) :
+		_csPin(csPin), _addrbus(addr_width) {
+	//addr = 0;
 }
 
 void SPISRAM::init() {
-	pinMode(_ncsPin, OUTPUT);
-	digitalWrite(_ncsPin, HIGH);
+	pinMode(_csPin, OUTPUT);
+	digitalWrite(_csPin, HIGH);
 	//
+	//addr = 0;
 	select();
 	writeStatusRegister(SEQ_MODE);
 	deselect();
 }
 
-byte SPISRAM::read(const word & address) {
+byte SPISRAM::read(const long & address) {
 	byte data;
+	//addr = ;
 	select();
 	set_access(READ, address);
 	data = SPI.transfer(0);
@@ -37,7 +37,7 @@ byte SPISRAM::read(const word & address) {
 	return data;
 }
 
-byte * SPISRAM::read(const word & address, byte *buffer, const word & size) {
+byte * SPISRAM::read(const long & address, byte *buffer, const long & size) {
 	select();
 //	SPI.transfer(WRSR);
 //	SPI.transfer(SEQ_MODE);
@@ -50,14 +50,14 @@ byte * SPISRAM::read(const word & address, byte *buffer, const word & size) {
 	return buffer;
 }
 
-void SPISRAM::write(const word & address, byte data) {
+void SPISRAM::write(const long & address, byte data) {
 	select();
 	set_access(WRITE, address);
 	SPI.transfer(data);
 	deselect();
 }
 
-void SPISRAM::write(const word & address, byte *buffer, const word & size) {
+void SPISRAM::write(const long & address, byte *buffer, const long & size) {
 	select();
 //	SPI.transfer(WRSR);
 //	SPI.transfer(SEQ_MODE);
@@ -75,24 +75,24 @@ void SPISRAM::setSPIMode(void) {
 }
 
 void SPISRAM::csLow() {
-	digitalWrite(_ncsPin, LOW);
+	digitalWrite(_csPin, LOW);
 }
 
 void SPISRAM::csHigh() {
-	digitalWrite(_ncsPin, HIGH);
+	digitalWrite(_csPin, HIGH);
 }
 
 void SPISRAM::select(void) {
 	setSPIMode();
 //	Serial.print(_ncsPin, HEX);
 //	Serial.print(" = ");
-	digitalWrite(_ncsPin, LOW);
+	digitalWrite(_csPin, LOW);
 //	Serial.println(digitalRead(_ncsPin), HEX);
 }
 
 void SPISRAM::deselect(void) {
 //	Serial.print(_ncsPin, HEX);
 //	Serial.print(" = ");
-	digitalWrite(_ncsPin, HIGH);
+	digitalWrite(_csPin, HIGH);
 //	Serial.println(digitalRead(_ncsPin), HEX);
 }

@@ -25,7 +25,7 @@ byte polltypes[] = {
 };
 
 void setup() {
-  Serial.begin(57600);
+  Serial.begin(19200);
   Wire.begin();
   nfc.begin();
 
@@ -41,25 +41,24 @@ void loop() {
 
   if ( millis() > prev + 50 ) {
     prev = millis();
-    if ( nfc.autoPoll(polltypes, buf) != 0 ) {
+    if ( nfc.InAutoPoll(1,1,polltypes+1,polltypes[0]) 
+      && nfc.getAutoPollResponse((byte*) buf) ) {
       c = buf[0];
       Serial << endl << c << " Tag, ";
       if ( c ) {
-        card.init();
+        card.clear();
         card.set(buf[1], buf+3);
-        Serial << "type = " << card.typeString((char*)buf, card.type) 
-          << endl;
-//        mon.printHex((byte*)card.id, card.IDLength); 
-//        mon << endl;
+        Serial << "card type = ";
+        card.printOn(Serial);
+        Serial  << endl;
+        //        mon.printHex((byte*)card.id, card.IDLength); 
+        //        mon << endl;
       }
       if ( card.type == 0x11 ) {
         Serial << "FeliCa" << endl 
           << " ID: "; 
-        mon.printHex( card.id, card.IDLength); 
-        mon << endl;
-        Serial << "Pad: "; 
-        mon.printHex( card.PMm, card.IDLength); 
-        mon << endl;
+        mon.printBytes( card.IDm, card.IDLength); 
+        mon << endl << endl;
         //        mon << mon.printHexString( card.SystemCode(), 2) << mon.endl;
 
         int len;
@@ -74,7 +73,7 @@ void loop() {
         word scode = 0x1a8b; //, 0x170f, 0x1317, 0x1713, 0x090f, 0xffff 
         int snum = 0;
         word blklist[] = { 
-          0,1,2,3         };
+          0,1,2,3                 };
         word codever = nfc.felica_RequestService(scode);
         mon.print(scode, HEX); 
         mon << ": ";
@@ -84,7 +83,7 @@ void loop() {
           c = nfc.felica_ReadBlocksWithoutEncryption(buf, scode, (byte) 4, blklist);
           if ( c != 0 ) {
             for(int i = 0; i < 4; i++) {
-              mon.printHex(buf+(i*16), 16); 
+              mon.printBytes(buf+(i*16), 16); 
               mon << endl;
             }
             Serial << endl;
@@ -93,7 +92,7 @@ void loop() {
       } 
       else if ( card.type == 0x10 ) {
         Serial << "Mifare" << endl << "  ID: ";
-        mon.printHex(card.UID, card.IDLength);
+        mon.printBytes(card.UID, card.IDLength);
         mon << endl;
         /*
        if ( nfc.mifare_AuthenticateBlock(card.UID(), card.IDLength(), 4,
@@ -115,7 +114,8 @@ void loop() {
 void reader_init() {
   unsigned long r;
   for (int i = 0; i < 10 ; i++) {
-    if ( (r = nfc.getFirmwareVersion()) )
+    if ( nfc.GetFirmwareVersion() &&
+      (r = nfc.getCommandResponse((byte*)tmp)) )
       break;
     delay(250);
   }
@@ -134,6 +134,7 @@ void reader_init() {
   nfc.SAMConfiguration();
   Serial << " finished." << endl;
 }
+
 
 
 

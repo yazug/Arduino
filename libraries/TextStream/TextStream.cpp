@@ -1,18 +1,18 @@
 /*
- * Monitor.cpp
+ * TextStream.cpp
  *
  *  Created on: 2012/08/12
  *      Author: sin
  */
 
-#include "Monitor.h"
+#include "TextStream.h"
 
-void Monitor::printHex(const byte b) {
+void TextStream::printHex(const byte b) {
 	write( ((b & 0xf0) < 0xa0 ? '0' : 'A'-10 ) + (b>>4) );
 	write( ((b & 0x0f) < 0x0a ? '0' : 'A'-10 ) + (b&0x0f) );
 }
 
-void Monitor::printBytes(const byte * a, const int length, const char gap,
+void TextStream::printBytes(const byte * a, const int length, const char gap,
 		byte base) {
 
 	for (int i = 0; i < length;) {
@@ -34,7 +34,7 @@ void Monitor::printBytes(const byte * a, const int length, const char gap,
 	return;
 }
 
-void Monitor::printBytes(const char * s, const int length, const char gap) {
+void TextStream::printBytes(const char * s, const int length, const char gap) {
 	for (int i = 0; i < length;) {
 		if (isprint(s[i]))
 			print(s[i]);
@@ -49,7 +49,7 @@ void Monitor::printBytes(const char * s, const int length, const char gap) {
 	return;
 }
 
-void Monitor::printWords(const word * a, const int length, const char gap) {
+void TextStream::printWords(const word * a, const int length, const char gap) {
 	for (int i = 0; i < length;) {
 		printHex(a[i] >> 8);
 		printHex(a[i]);
@@ -71,30 +71,37 @@ void Monitor::printWords(const word * a, const int length, const char gap) {
  }
  */
 
-byte * Monitor::scanBytes(byte * str, const int len, const byte base) {
+int TextStream::scanBytes(char * str, byte * result, const int maxnum, const byte base) {
 	char c;
-	byte val = 0;
-	for(int i = 0; i < len; i++) {
-		c = str[i<<1];
+	byte val;
+	int n;
+	for(n = 0; (*str != 0) && (n < maxnum); n++ ) {
+		c = *str++;
+		if ( !isxdigit(c) )
+			continue;
+
+		// lower nibble or upper nibble
 		if ( c & 0x40 ) {
 			val = (c & 0x4f) - 'A' + 10;
 		} else {
 			val = c - '0';
 		}
-		val <<= 4;
-		c = str[(i<<1)+1];
-		if ( c & 0x40 ) {
-			val |= (c & 0x4f) - 'A' + 10;
-		} else {
-			val |= c - '0';
+		c = *str++;
+		if ( isxdigit(c) ) {
+			val <<= 4;
+			if ( c & 0x40 ) {
+				val |= (c & 0x4f) - 'A' + 10;
+			} else {
+				val |= c - '0';
+			}
 		}
-		str[i] = val;
+		result[n] = val;
 	}
-	return str;
+	return n;
 }
 
 
-word Monitor::readToken(char buf[], long timeout) {
+int TextStream::readToken(char buf[], long timeout) {
 	long msec = millis();
 	int bp = 0;
 	byte c = 0;
@@ -117,7 +124,7 @@ word Monitor::readToken(char buf[], long timeout) {
 	return bp;
 }
 
-int Monitor::ithToken(const char buf[], const int item, int & fromix) {
+int TextStream::ithToken(const char buf[], const int item, int & fromix) {
 	int tc, tend;
 	for (tc = 0, tend = 0, fromix = 0; buf[fromix]; tc++) {
 		for (fromix = tend; buf[fromix]; fromix++)
@@ -132,57 +139,39 @@ int Monitor::ithToken(const char buf[], const int item, int & fromix) {
 	return tend - fromix;
 }
 
-boolean Monitor::readLine(char buf[], int maxlen, long wait) {
+boolean TextStream::readLine(char buf[], const int startidx, const int maxlen, const long wait) {
 	long msec = millis();
-	int bp = 0;
-	byte c;
+	int bp = startidx;
+	char c;
 	boolean lineEnded = false;
 
-	while (available()) {
-		c = read();
-		if (iscntrl((char) c)) {
-			lineEnded = true;
-			break;
-		}
-		if (bp < maxlen)
-			buf[bp++] = c;
-		if (millis() > wait + msec) {
-			break;
-		}
-	}
-	buf[bp] = 0;
-	return lineEnded;
-}
-
-boolean Monitor::concatenateLine(char buf[], int maxlen, long wait) {
-	long msec = millis();
-	int bp = 0;
-	byte c;
-	boolean lineEnded = false;
-
-	while (buf[bp] != 0 && bp < maxlen)
-		bp++;
-	while (available() && bp < maxlen) {
-		c = read();
-		if (iscntrl((char) c)) {
-			//Serial.print(" * ");
+	while ( available() ) {
+		c = read() & 0xff;
+		if ( iscntrl(c) && (c != '\t') ) {
 			lineEnded = true;
 			break;
 		}
 		buf[bp++] = c;
-		if ( !(bp < maxlen) )
+		if ( !(bp < maxlen) ) {
 			lineEnded = true;
+			break;
+		}
+		//	buf[bp++] = (byte) c;
 		if (millis() > wait + msec) {
+			//Serial.print("cannot wait ");
+			//Serial.println(millis() - msec);
 			break;
 		}
 	}
-	/*
-	Serial.print("bp = ");
-	Serial.println(bp);
-	Serial.print("maxlen = ");
-	Serial.println(maxlen);
-	*/
 	buf[bp] = 0;
+	//   if the file is ending with non-control char, ...
 	return lineEnded;
+}
+
+boolean TextStream::concateLine(char buf[], const int maxlen, const long wait) {
+	int istart = 0;
+	while (buf[istart] != 0 && istart < maxlen)
+		istart++;
+	return readLine(buf, istart, maxlen, wait);
 }
 
