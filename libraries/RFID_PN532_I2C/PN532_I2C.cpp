@@ -649,6 +649,7 @@ byte PN532::felica_Polling(byte * resp, const word syscode) {
 	resp[4] = 0; // time slot #
 	byte result = InCommunicateThru(resp, 5);
 	result = getCommunicateThruResponse(resp);
+	printHexString(resp, result);
 	if (resp[0] == FELICA_CMD_POLLING + 1) {
 		target.IDLength = 8;
 		memcpy(target.IDm, resp + 1, target.IDLength);

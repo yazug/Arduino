@@ -2,12 +2,12 @@
 #include "PN532_I2C.h"
 #include "ISO14443.h"
 
-#include "Monitor.h"
+#include "TextStream.h"
 char tmp[80];
-Monitor mon(Serial);
+TextStream mon(Serial);
 
 #define IRQ   (2)
-#define RESET (0xff)  // Not connected by default on the NFC Shield
+#define RESET (7)  // Not connected by default on the NFC Shield
 PN532 nfc(PN532::I2C_ADDRESS, IRQ, RESET);
 
 const byte IizukaKey[] = {

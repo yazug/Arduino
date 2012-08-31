@@ -5,7 +5,7 @@
 #else
 #include <WProgram.h>
 #endif
-#include "SoftwareSerial.h"
+#include <SoftwareSerial.h>
 
 class SL025 {
       

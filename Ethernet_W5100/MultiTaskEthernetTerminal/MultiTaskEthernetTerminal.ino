@@ -8,8 +8,8 @@
 //#include "SD_SPI.h"
 #include "SPISRAM.h"
 
-#include "Des.h"
-#include "Monitor.h"
+//#include "Des.h"
+#include "TextStream.h"
 
 #include "IDCard.h"
 #include "queue.h"
@@ -40,7 +40,7 @@ byte ip[] = {
 const unsigned int DoorControllerCommandPort = 7602;
 EthernetServer server(DoorControllerCommandPort);
 
-Monitor mon(Serial);
+TextStream mon(Serial);
 EthernetClient client;
 long client_idle_since = 0;
 enum {
@@ -66,7 +66,7 @@ SPISRAM spisram(SRAM_CS);
 byte buf[128];
 long stwatch;
 
-Des codec;
+//Des codec;
 
 void setup() {
   // Open serial communications and wait for port to open:
@@ -245,8 +245,8 @@ char tmp[32];
     if (millis() < client_idle_since + 30000L  ) {
       // an http request ends with a blank line
       if ( client.connected() && client.available() ) {
-        Monitor cmon(client);
-        if ( cmon.concatenateLine((char*)buf, 127) > 0 ) {
+        TextStream cmon(client);
+        if ( cmon.readLine((char*)buf, 127) > 0 ) {
           for(int i = 0; buf[i] ; i++) 
             buf[i] = toupper(buf[i]);
           len = cmon.ithToken((const char*)buf, 0, pos);
@@ -298,7 +298,7 @@ char tmp[32];
               cmon << ">> " << "ENCRYPT ";
               cmon.printBytes((char*)buf+pos, len);
              cmon << endl;
-              codec.key_set(buf);
+              //codec.key_set(buf);
               ecb_crypt((char*)buf+pos, (char*)tmp, len>>3, true);
               cmon << ">> " << "CODED ";
               cmon.printBytes((char*)tmp, len);
@@ -341,7 +341,7 @@ char tmp[32];
   } 
   else if ( server_status == LISTING ) {
     current = millis();
-    Monitor cmon(client);
+    TextStream cmon(client);
     for( /* value is set already */; 
     listix < cardlog.count() && millis() < current + 200 ; listix++) {
         if ( listix == 0 ) {
@@ -401,7 +401,7 @@ void ecb_crypt(char * intext, char * outtext, int n, boolean encode) {
   }
   for(int ith = 0; ith < (n>>3); ith++) {
     memset(outtext+(ith*8), 0x20, 8);
-    codec.ecb_crypt(intext+(ith*8), outtext+(ith*8), encode);
+    //codec.ecb_crypt(intext+(ith*8), outtext+(ith*8), encode);
   }
 }
 
