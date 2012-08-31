@@ -46,13 +46,15 @@ byte polling[] = {
 const int SRAM_CS = 10;
 SPISRAM sram(SRAM_CS, SPISRAM::BUS_MBits); // CS pin
 
-int cardcount;
+long cardcount;
 RecordBuffer record;
 
 void setup()
 {
+  pinMode(9, OUTPUT);
+  digitalWrite(9, HIGH);
   // Open serial communications and wait for port to open:
-  Serial.begin(57600);
+  Serial.begin(19200);
   while (!Serial);
   //delay(1000);
 
@@ -144,12 +146,12 @@ void setup()
     swatch = millis();
     for(long i = 0; i < cardcount; i++) {
       sram.read(i*24, record.rawbytes, 24);
-      if ( i < 5 || i > cardcount - 4 ) {
+      if ( i < 4 || i > cardcount - 4 ) {
         Serial.print(i);
         Serial.print(" ");
         record.printOn(Serial);
-        if ( i == 4 ) 
-          Serial.println("...");
+//        if ( i == 4 ) 
+//          Serial.println("...");
       }
     }
     Serial.println(millis() - swatch);
@@ -278,14 +280,14 @@ boolean halt() {
 
 int bsearch(long limit, char id[]) {
   RecordBuffer r;
-  
+  /*
   for(int i = 0; i < 11; i++) {
    Serial.print(id[i], HEX);
    Serial.print(' ');
    }
    Serial.println();
    Serial.println();
-   
+*/   
   long ib = 0;
   long ie = limit;
   long ix;
@@ -293,7 +295,7 @@ int bsearch(long limit, char id[]) {
     ix = (ib+ie)/2;
     sram.read(ix * 24, r.rawbytes, 24);
     int diff = memcmp(r.rawbytes, id, 11);
-    /*
+    
     r.printOn(Serial);
      Serial.print(ix);
      Serial.print(": ");
@@ -305,7 +307,7 @@ int bsearch(long limit, char id[]) {
      Serial.print(diff);
      Serial.println();
      Serial.println();
-*/     
+     
     if ( diff == 0 ) {
       return ix;
     }
@@ -365,33 +367,23 @@ byte read_FCF() {
 
 
 void PN532_init() {
-
-  mon << "Firmware version: ";
-  unsigned long r = 0;
-  for (int i = 0; i < 10 ; i++) {
-    if ( (r = nfc.GetFirmwareVersion()) )
-      break;
-    delay(250);
-  }
-  if (! r ) {
-    mon << "Couldn't find PN53x on Wire." << endl;
-    while (1); // halt
+  byte cnt = 0;
+  for (int i = 0; i < 3  && !( nfc.GetFirmwareVersion() && (cnt = nfc.getCommandResponse((byte*)buf)) ); i++) 
+    delay(500);
+  if (! cnt ) {
+    Serial << "Couldn't find PN53x on Wire." << endl;
+    return;
   } 
-  else {
-    mon.printBytes((byte*)&r, 4); 
-    mon << endl;
+  Serial << "PN53x IC ver. " << (char) buf[0] << ", Firmware ver. " 
+    << (byte) buf[1] << '.' << (byte) buf[2] << endl;
+
+  if ( nfc.SAMConfiguration() && nfc.getCommandResponse((byte*)buf) 
+    && nfc.status() == PN532::RESP_RECEIVED) {
+    Serial << "SAMConfiguration," << endl;
   }
-
-  // Got ok data, print it out!
-  mon << "Found chip PN5";
-  mon.println(r & 0xff, HEX);
-  mon << "Firmware ver. " << (r>>8 & 0xFF) << '.' 
-    << (r>>16 & 0xFF) << endl;
-
-  mon << "SAMConfiguration" << endl;
-
-  nfc.SAMConfiguration();
-  mon << endl;
+  nfc.CPU_PowerMode(2);
+  nfc.getCommandResponse((byte*)buf);
+  return;
 }
 
 

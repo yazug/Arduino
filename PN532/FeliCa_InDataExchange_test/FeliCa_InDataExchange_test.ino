@@ -82,28 +82,20 @@ void loop() {
 void PN532_init() {
 
   mon << "Firmware version: ";
-  unsigned long r = 0;
+  byte r = 0;
+  byte buf[4];
   for (int i = 0; i < 10 ; i++) {
-    if ( (r = nfc.GetFirmwareVersion()) )
+    if ( nfc.GetFirmwareVersion() && (r = nfc.getCommandResponse((byte*)buf)) )
       break;
     delay(250);
   }
   if (! r ) {
     mon << "Couldn't find PN53x on Wire." << endl;
     while (1); // halt
-  } 
-  else {
-    mon.printBytes((byte*)&r, 4);
-   mon << endl;
   }
 
-  // Got ok data, print it out!
-  Serial.print("Found chip PN5"); 
-  Serial.println(r & 0xff, HEX);
-  Serial.print("Firmware ver. "); 
-  Serial.print(r>>8 & 0xFF, DEC); 
-  Serial.print('.'); 
-  Serial.println(r>>16 & 0xFF, DEC);
+  Serial << "PN53x IC ver. " << (char) buf[0] << ", Firmware ver. " 
+    << (byte) buf[1] << '.' << (byte) buf[2] << endl;
 
   Serial.println("SAMConfiguration");
   nfc.SAMConfiguration();

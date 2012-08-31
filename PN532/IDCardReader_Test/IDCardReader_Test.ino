@@ -170,20 +170,16 @@ byte read_FCF() {
 
   if ( scver == 0xffff ) 
     return 0;
-
-  for (word blkno = 0; blkno < 4; blkno++) {
-    c = nfc.felica_ReadWithoutEncryption(buf, servcode, 1, & blkno);
+  word blist[] = { 0, 1, 2, 3};
+    c = nfc.felica_ReadBlocksWithoutEncryption(buf, servcode, (byte) 1, blist);
     if ( c == 0 ) {
       Serial << endl << "failed. " << endl;
       return 0;
     }
-    mon.printBytes((byte*)&blkno, 1) ;
-    mon << ": ";
     mon.printBytes(buf, 16);
     mon << "  ";
     mon.printBytes((char*) buf, 16);
     mon << endl;
-  }
   mon << "--- End of FCF reading ---" << endl << endl;
   return 1;
 }
