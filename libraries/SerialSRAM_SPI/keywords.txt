@@ -14,6 +14,11 @@ SPISRAM	KEYWORD1
 
 read	KEYWORD2
 write	KEYWORD2
+csLow	KEYWORD2
+csHigh	KEYWORD2
+select	KEYWORD2
+deselect	KEYWORD2
+setSPIMode	KEYWORD2
 
 #######################################
 # Constants (LITERAL1)

@@ -19,7 +19,7 @@ SPISRAM::SPISRAM(const byte csPin, const byte addr_width) :
 
 void SPISRAM::init() {
 	pinMode(_csPin, OUTPUT);
-	digitalWrite(_csPin, HIGH);
+	csHigh();
 	//
 	//addr = 0;
 	select();
@@ -84,15 +84,9 @@ void SPISRAM::csHigh() {
 
 void SPISRAM::select(void) {
 	setSPIMode();
-//	Serial.print(_ncsPin, HEX);
-//	Serial.print(" = ");
-	digitalWrite(_csPin, LOW);
-//	Serial.println(digitalRead(_ncsPin), HEX);
+	csLow();
 }
 
 void SPISRAM::deselect(void) {
-//	Serial.print(_ncsPin, HEX);
-//	Serial.print(" = ");
-	digitalWrite(_csPin, HIGH);
-//	Serial.println(digitalRead(_ncsPin), HEX);
+	csHigh();
 }

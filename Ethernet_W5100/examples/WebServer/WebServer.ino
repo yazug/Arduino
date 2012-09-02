@@ -25,13 +25,13 @@
 
 #include "DS3234.h"
 
-DS3234 rtc(11);
+DS3234 rtc(9);
 
 // Enter a MAC address and IP address for your controller below.
 // The IP address will be dependent on your local network:
 byte mac[] = { 
   0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
-IPAddress ip(192,168,1, 177);
+IPAddress ip(192,168,24, 177);
 
 // Initialize the Ethernet server library
 // with the IP address and port you want to use 
@@ -47,8 +47,6 @@ void setup() {
 
   pinMode(8, OUTPUT);
   digitalWrite(8, HIGH);
-  pinMode(9, OUTPUT);
-  digitalWrite(9, HIGH);
   pinMode(4, OUTPUT);
   digitalWrite(4, HIGH);
 
@@ -91,17 +89,12 @@ void loop() {
           // add a meta refresh tag, so the browser pulls again every 5 seconds:
           client.println("<meta http-equiv=\"refresh\" content=\"10\">");
           
-          client.println("Current date and time <br />");
+          client.println("Date and time now: ");
           rtc.update();
 //          client.print(rtc.copyNameOfDay(buf, rtc.dayOfWeek()));
-          client.print(", ");
-          client.print(rtc.cal&0xff);
+          client.print(rtc.cal, HEX);
           client.print(" ");
 //          client.print(rtc.copyNameOfMonth(buf, rtc.cal>>8&0x01f));
-          client.print(", 20");
-          client.print(rtc.cal>>20&0x0f, HEX);
-          client.print(rtc.cal>>16&0x0f, HEX);
-          client.print(" ");
           client.print(rtc.time>>16&0xff, HEX);
           client.print(":");
           client.print(rtc.time>>8&0xff, HEX);

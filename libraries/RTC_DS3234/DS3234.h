@@ -1,24 +1,14 @@
 #ifndef DS3234_H
 #define DS3234_H
 
-#ifdef AVR
 #include <avr/pgmspace.h>
-#else
-#define PROGMEM
-#define prog_char char
-#define strcpy_P strcpy
-#endif
 
 #if ARDUINO >= 100
 #include <Arduino.h>
 #else
 #include <WProgram.h>
 #endif
-#ifdef NON_ARDUINO_IDE
-#include <SPI/SPI.h>
-#else
 #include <SPI.h>
-#endif
 
 class DS3234 {
 	byte cs_pin;
@@ -37,6 +27,31 @@ class DS3234 {
 
 	static const byte ADDRESS_READ = 0x00;
 	static const byte ADDRESS_WRITE = 0x80;
+
+	enum CONTROL_REGISTER_BIT {
+		A1IE = 0,
+		A2IE = 1,
+		INTCN = 2,
+		RS1 = 3,
+		CONV = 5,  // do temp conversions to adjust clock
+		BBSQW = 6,
+		_EOSC = 7  // stop clock while battery powered
+	};
+	enum CONTROL_STATUS_REGISTER_BIT {
+		OSF = 7,
+		BB32kHz = 6,
+		CRATE0 = 4,
+		EN32kHz = 3,
+		BSY = 2,
+		A2F = 1,
+		A1F = 0
+	};
+	static const byte DEFAULT_REGISTER_CONTROL = 0x00 | (1<<CONTROL_REGISTER_BIT::CONV);
+	static const byte DEFAULT_REGISTER_CONTROL_STATUS = 0; // all-off
+
+	byte * transfer(byte reg, byte * buf, int num);
+
+public:
 	static const byte REGISTER_SECONDS = 0x00;
 	static const byte REGISTER_DAY = 0x03;
 	static const byte REGISTER_DATE = 0x04;
@@ -44,12 +59,11 @@ class DS3234 {
 	static const byte REGISTER_YEAR = 0x06;
 	static const byte REGISTER_TEMPMSB = 0x11;
 	static const byte REGISTER_TEMPLSB = 0x12;
+	static const byte REGISTER_CONTROL = 0x0E;
+	static const byte REGISTER_CONTROL_STATUS = 0x0F;
 
-public:
-	PROGMEM const static prog_char
-		NameOfDay[36];
-	PROGMEM const static prog_char
-	NameOfMonth[60];
+	PROGMEM const static prog_char NameOfDay[36];
+	PROGMEM const static prog_char NameOfMonth[60];
 	enum DAYINDEX {
 		NA = 0, SUN = 1, MON, TUE, WED, THU, FRI, SAT,
 	};
@@ -58,22 +72,35 @@ public:
 	long time, cal;
 	int tempt;
 
-	DS3234(byte pin) {
-		cs_pin = pin;
-		deselect();
+	DS3234(byte pin) : cs_pin(pin), time(0), cal(0) {
+//		deselect();
 	}
 
-	void init();
-	void begin() {
-		init();
+	boolean init();
+	inline boolean begin() {
+		return init();
 	}
-	void select() {
-		SPI.setClockDivider(SPI_CLOCK_DIV16);
+
+	void SPISRAM::setSPIMode(void) {
+		SPI.setClockDivider(SPI_CLOCK_DIV8);
 		SPI.setDataMode(SPI_MODE1);
 		SPI.setBitOrder(MSBFIRST);
-		digitalWrite(cs_pin, LOW);
+	}
+
+	void select() {
+		SPI.setClockDivider(SPI_CLOCK_DIV8);
+		SPI.setDataMode(SPI_MODE1);
+		SPI.setBitOrder(MSBFIRST);
+		csLow();
 	}
 	void deselect() {
+		csHigh();
+	}
+
+	inline void csLow() {
+		digitalWrite(cs_pin, LOW);
+	}
+	inline void csHigh() {
 		digitalWrite(cs_pin, HIGH);
 	}
 
@@ -90,8 +117,6 @@ public:
 		return buf;
 	}
 
-	byte * transfer(byte reg, byte * buf, int num);
-
 	void setCalendar(const long & yymmdd);
 	inline void setCalendar() { setCalendar(cal); }
 	void setTime(const long & hhmmdd);
@@ -103,6 +128,16 @@ public:
 		updateCalendar();
 	}
 	void updateTemperature(); // returns x100 of Celsius Centigrade.
+
+	inline void writeRegister(byte r, byte val) {
+		transfer(ADDRESS_WRITE | r, (byte*)&val, 1);
+	}
+
+	inline byte readRegister(byte r) {
+		byte t;
+		transfer(ADDRESS_READ | r, (byte*)&t, 1);
+		return t;
+	}
 
 	byte dayOfWeek();
 

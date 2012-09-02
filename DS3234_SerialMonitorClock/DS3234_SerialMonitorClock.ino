@@ -22,15 +22,20 @@ void setup() {
   
   Serial.begin(9600);
   Serial.println("Hi.");
+
+  pinMode(4, OUTPUT);
+  digitalWrite(4, HIGH);
   
   SPI.begin();
   rtc.begin();
-  /*
-  byte a[] = {1};
-   rtc.transfer(0x93, a,1);
-   */
-
-  delay(500);
+  delay(100);
+  Serial.print(DS3234::REGISTER_CONTROL, HEX);
+  Serial.print(" ");
+  Serial.println(rtc.readRegister(DS3234::REGISTER_CONTROL), BIN);
+  Serial.print(DS3234::REGISTER_CONTROL_STATUS, HEX);
+  Serial.print(" ");
+  Serial.println(rtc.readRegister(DS3234::REGISTER_CONTROL_STATUS), BIN);
+  delay(100);
 }
 
 void loop() {

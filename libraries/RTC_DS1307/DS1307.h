@@ -81,7 +81,8 @@ public:
 //		long time();
 //		long calendar();
 //		void tweakMinutes(int);
-	void setRegister(byte, byte);
+	void writeRegister(byte, byte);
+	byte readRegister(byte);
 
 	void start(void);
 	void stop(void);

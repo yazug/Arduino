@@ -11,7 +11,7 @@ atmega644.bootloader.high_fuses=0x9A
 atmega644.bootloader.extended_fuses=0xFF
 atmega644.bootloader.path=atmega
 atmega644.bootloader.file=ATmegaBOOT_168_atmega644p.hex
-#atmega644.bootloader.file=ATmegaBOOT_644P.hex
+#atmega644.bootloader.file=ATmegaBOOT_168_atmega1284p.hex
 atmega644.bootloader.unlock_bits=0x3F
 atmega644.bootloader.lock_bits=0x0F
 
@@ -26,7 +26,7 @@ atmega12848m.name=Quaranta 1284p @ 8MHz
 
 atmega12848m.upload.protocol=stk500
 atmega12848m.upload.maximum_size=131072
-atmega12848m.upload.speed=19200
+atmega12848m.upload.speed=38400
 
 atmega12848m.bootloader.low_fuses=0xFD
 atmega12848m.bootloader.high_fuses=0x9A

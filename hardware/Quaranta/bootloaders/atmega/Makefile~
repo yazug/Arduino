@@ -212,7 +212,7 @@ atmega1284p_8m: $(PROGRAM)_atmega1284p_8m.hex
 
 atmega644p: TARGET = atmega644p
 atmega644p: MCU_TARGET = atmega644p
-atmega644p: CFLAGS += '-DMAX_TIME_COUNT=F_CPU>>4' '-DNUM_LED_FLASHES=0' '-DBAUD_RATE=115200'
+atmega644p: CFLAGS += '-DMAX_TIME_COUNT=F_CPU>>4' '-DNUM_LED_FLASHES=0' '-DBAUD_RATE=57600'
 atmega644p: AVR_FREQ = 16000000L
 atmega644p: LDSECTION  = --section-start=.text=0xF800
 atmega644p: $(PROGRAM)_atmega644p.hex

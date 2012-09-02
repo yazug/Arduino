@@ -120,8 +120,14 @@ long DS1307::JD2000(byte year, byte month, byte day) {
 //			+ 1720994.5 + b);
 }
 
-void DS1307::setRegister(byte rg, byte val) {
-	writeRegisters(rg % 0x40, (uint8_t *)&val, 1);
+void DS1307::writeRegister(byte rg, byte val) {
+	writeRegisters(rg % 0x40, (uint8_t *) &val, 1);
+}
+
+byte DS1307::readRegister(byte rg) {
+	byte val;
+	readRegisters(rg % 0x40, (uint8_t *) &val, 1);
+	return val;
 }
 
 

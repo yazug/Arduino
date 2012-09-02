@@ -1,6 +1,6 @@
 #include "TextStream.h"
 
-class RecordBuffer {
+class ICCardKey {
   static const unsigned int SizeOfBuffer = 8;
 public:
   union {
@@ -44,7 +44,8 @@ public:
     return os;
   }
 
-  RecordBuffer() {
+  ICCardKey() {
+    init();
   }
 
   void init() {

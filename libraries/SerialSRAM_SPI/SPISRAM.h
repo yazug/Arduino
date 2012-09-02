@@ -58,33 +58,6 @@ private:
 	}
 
 public:
-	/*
-	 struct MemCell {
-	 SPISRAM &device;
-	 unsigned int address;
-
-	 MemCell &operator=(const byte data) {
-	 device.write(address, data);
-	 return *this;
-	 }
-
-	 operator byte() {
-	 return device.read(address);
-	 }
-
-	 MemCell(SPISRAM &d, unsigned int a) :
-	 device(d), address(a) {
-	 }
-
-	 ~MemCell() {
-	 }
-
-	 };
-	 MemCell operator[](unsigned int address) {
-	 MemCell memcell(*this, address);
-	 return memcell;
-	 }
-	 */
 	enum {
 		BUS_WIDTH_23K256 = 16, // 23K256
 		BUS_WIDTH_23K640 = 16,  // 23K640

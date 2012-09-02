@@ -5,10 +5,10 @@
 #include "SPISRAM.h"
 
 
-#include "RecordBuffer.h"
+#include "ICCardKey.h"
 // On the Ethernet Shield, CS is pin 4. 
-const int chipSelect = 4;
-SDClass SD(chipSelect);
+const int SD_chipSelect = 4;
+SDClass SD(SD_chipSelect);
 
 const char * datafname = "keys.txt";
 const char * dbfname = "keys.dbn";
@@ -19,11 +19,16 @@ const byte	sys_key[8]  = {
   0x5C, 0x78, 0x51, 0xCB, 0x6A, 0xB5, 0x4E, 0x5E};
 //Des codec(uni_key);
 
-const int SRAM_CS = 10;
+const int SRAM_CS = 8;
 SPISRAM sram(SRAM_CS, SPISRAM::BUS_MBits); // CS pin
 
 void setup()
 {
+  pinMode(9, OUTPUT);
+  digitalWrite(9, HIGH);
+  pinMode(10, OUTPUT);
+  digitalWrite(10, HIGH);
+  //
   // Open serial communications and wait for port to open:
   Serial.begin(57600);
   while (!Serial);
@@ -35,14 +40,15 @@ void setup()
 
   SD.begin() || (Serial.println("Card failed, or not present") && halt() );
   Serial.println("card initialized.");
-
+  sram.begin();
+  
   File datafile = SD.open(datafname);
   if ( !datafile ) Serial.println("Failed to open data file.");
   //  File dbfile = SD.open(dbfname, FILE_WRITE);
   //  if ( !dbfile ) Serial.println("Failed to open db file.");
 
   char buf[128];
-  RecordBuffer record;
+  ICCardKey record;
 
   long swatch = millis();
   if (datafile) {
@@ -103,7 +109,7 @@ void setup()
         //        Serial.println();
         //        if ( !dbfile.write(record.rawbytes, 32) )
         //          Serial.println("write failed!!!");
-        sram.write(cnt * 24, record.rawbytes, 24);
+        sram.write(cnt * sizeof(ICCardKey), record.rawbytes, sizeof(ICCardKey));
         cnt++;
         buf[0] = 0;
       }
@@ -159,7 +165,7 @@ boolean halt() {
 }
 
 int bsearch(long limit, char id[]) {
-  RecordBuffer r;
+  ICCardKey r;
   /*
   for(int i = 0; i < 11; i++) {
     Serial.print(id[i], HEX);

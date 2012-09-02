@@ -31,9 +31,13 @@ long DS3234::JD2000(byte year, byte month, byte day) {
 //			+ 1720994.5 + b);
 }
 
-void DS3234::init() {
+boolean DS3234::init() {
 	pinMode(cs_pin, OUTPUT);
-	digitalWrite(cs_pin, HIGH);
+	csHigh();
+	//
+	delayMicroseconds(100);
+	writeRegister(REGISTER_CONTROL, DEFAULT_REGISTER_CONTROL);
+	writeRegister(REGISTER_CONTROL_STATUS, DEFAULT_REGISTER_CONTROL_STATUS);
 }
 
 byte * DS3234::transfer(byte reg, byte * buf, int num) {
@@ -72,6 +76,7 @@ void DS3234::updateTime() {
 void DS3234::updateCalendar() {
 	transfer(REGISTER_DATE, (byte*) &cal, 3);
 	cal &= ((unsigned long)BITS_YR<<16 | (unsigned long)BITS_MTH<<8 | BITS_DATE);
+	cal |= 0x20000000;
 //	return cal;
 }
 

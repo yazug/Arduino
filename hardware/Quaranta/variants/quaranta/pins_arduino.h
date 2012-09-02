@@ -43,7 +43,7 @@ static const uint8_t SS   = 10; // PB4
 static const uint8_t MOSI = 11;
 static const uint8_t MISO = 12;
 static const uint8_t SCK  = 13; // PB7
-static const uint8_t LED_BUILTIN = 13;
+static const uint8_t LED_BUILTIN = 14;
 
 
 // Mapping of analog pins as digital I/O
