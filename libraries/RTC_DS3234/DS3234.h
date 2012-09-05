@@ -28,7 +28,8 @@ class DS3234 {
 	static const byte ADDRESS_READ = 0x00;
 	static const byte ADDRESS_WRITE = 0x80;
 
-	enum CONTROL_REGISTER_BIT {
+	// CONTROL_REGISTER_BIT
+	enum {
 		A1IE = 0,
 		A2IE = 1,
 		INTCN = 2,
@@ -37,7 +38,8 @@ class DS3234 {
 		BBSQW = 6,
 		_EOSC = 7  // stop clock while battery powered
 	};
-	enum CONTROL_STATUS_REGISTER_BIT {
+	// CONTROL_STATUS_REGISTER_BIT
+	enum  {
 		OSF = 7,
 		BB32kHz = 6,
 		CRATE0 = 4,
@@ -46,8 +48,9 @@ class DS3234 {
 		A2F = 1,
 		A1F = 0
 	};
-	static const byte DEFAULT_REGISTER_CONTROL = 0x00 | (1<<CONTROL_REGISTER_BIT::CONV);
-	static const byte DEFAULT_REGISTER_CONTROL_STATUS = 0; // all-off
+	static const byte DEFAULT_REGISTER_CONTROL = 0x00 | (1 << CONV) | (1<<INTCN);
+	static const byte DEFAULT_REGISTER_CONTROL_STATUS = 0x00 ; // all-off
+	//osf must be cleared, bb32 should be cleared, en32 should be cleared
 
 	byte * transfer(byte reg, byte * buf, int num);
 
@@ -72,7 +75,7 @@ public:
 	long time, cal;
 	int tempt;
 
-	DS3234(byte pin) : cs_pin(pin), time(0), cal(0) {
+	DS3234(byte pin) : cs_pin(pin), time(0), cal(0), tempt(0) {
 //		deselect();
 	}
 
@@ -81,7 +84,7 @@ public:
 		return init();
 	}
 
-	void SPISRAM::setSPIMode(void) {
+	void setSPIMode(void) {
 		SPI.setClockDivider(SPI_CLOCK_DIV8);
 		SPI.setDataMode(SPI_MODE1);
 		SPI.setBitOrder(MSBFIRST);
