@@ -77,8 +77,6 @@ boolean DataFlash::init(void) {
 	}
 	PageToBufferTransfer(0);
 	PageToBufferTransfer(1);
-	pageCached[0] = 0;
-	pageCached[1] = 1;
 #ifdef DEBUG
 	Serial.print("page read cache: ");
 	Serial.println(pageCached[0], HEX);
@@ -117,8 +115,9 @@ int DataFlash::read(const unsigned long & addr) {
 	byte bufsel = page & 1;
 
 	if ( pageCached[bufsel] != page) {
+		if ( pageModified[bufsel] )
+			BufferToPageProgram(pageCached[bufsel]);
 		PageToBufferTransfer(page);
-		pageCached[bufsel] = page;
 #ifdef DEBUG
 		Serial.print("page read cache: ");
 		Serial.println(page, HEX);
@@ -128,9 +127,8 @@ int DataFlash::read(const unsigned long & addr) {
 }
 
 void * DataFlash::read(const unsigned long & addr, byte *buf, const long & n) {
-	for(unsigned long i = addr ; i <= addr+n; i++, buf++) {
+	for(unsigned long i = addr ; i <= addr+n; i++, buf++)
 		*buf = (byte) read(i);
-	}
 }
 
 size_t DataFlash::write(const unsigned long & addr, byte b) {
@@ -143,7 +141,8 @@ size_t DataFlash::write(const unsigned long & addr, byte b) {
 		Serial.print("cache write page: ");
 		Serial.print(pageCached[bufsel], HEX);
 #endif
-		BufferToPageProgram(pageCached[bufsel]);
+		if ( pageModified[bufsel] )
+			BufferToPageProgram(pageCached[bufsel]);
 #ifdef DEBUG
 		Serial.println(" Ok. ");
 #endif
@@ -152,13 +151,12 @@ size_t DataFlash::write(const unsigned long & addr, byte b) {
 		Serial.println(page, HEX);
 #endif
 		PageToBufferTransfer(page);
-		pageCached[bufsel] = page;
 #ifdef DEBUG
 		Serial.println(" Ok. ");
 #endif
 	}
 
-	writeBuffer( (bufsel <<15) | offset, b);
+	writeBuffer( (bufsel << 15) | offset, b);
 	return 1;
 }
 
@@ -218,6 +216,8 @@ void DataFlash::PageToBufferTransfer(unsigned int page) {
 		;
 //  while(!(ReadStatusRegister() & Status_RDYBUSY));		//monitor the status register, wait until busy-flag is high
 	deselect();
+	pageCached[bufsel] = page;
+	pageModified[bufsel] = false;
 }
 /*****************************************************************************
  *  
@@ -447,7 +447,7 @@ void DataFlash::BufferToPageProgram(unsigned int dstpage) {
 	byte bufsel = dstpage & 1;
 //  deselect();	//make sure to toggle CS signal in order
 	select();	//to reset DataFlash command decoder
-	if (bufsel == 1) {
+	if ( bufsel ) {
 		SPI.transfer(Buffer2toMainMemoryPageProgramWithBuiltinErase);
 		//DF_SPI_RW(Buffer1toMainMemoryPageProgramWithBuiltinErase);
 		//buffer 1 to flash with erase op-code
@@ -476,6 +476,8 @@ void DataFlash::BufferToPageProgram(unsigned int dstpage) {
 	while (_notBusy())
 		;			//monitor the status register, wait until busy-flag is high
 	deselect();
+	pageCached[bufsel] = dstpage;
+	pageModified[bufsel] = false;
 }
 /*****************************************************************************
  * 

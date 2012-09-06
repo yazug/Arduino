@@ -28,8 +28,8 @@
 //  20031009          port to avr-gcc/avr-libc                      - M.Thomas
 //
 //*****************************************************************************
-///#ifndef __DATAFLASH_INCLUDED
-//#define __DATAFLASH_INCLUDED
+#ifndef __DATAFLASH_H_
+#define __DATAFLASH_H_
 
 #include <inttypes.h>
 #include <avr/pgmspace.h>
@@ -103,6 +103,7 @@ class DataFlash /*: Print */ {
 	byte bitWidthPerPage;
 	//
 	word pageCached[2];
+	boolean pageModified[2];
 //	byte currentBuffer;
 
 private:
@@ -199,3 +200,4 @@ public:
 
 };
 // *****************************[ End Of DATAFLASH.H ]*****************************
+#endif // __DATAFLASH_H_
