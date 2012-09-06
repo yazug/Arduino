@@ -38,8 +38,8 @@
 #include <Print.h>
 #include <SPI.h>
 
-//Dataflash opcodes
 /*
+//Dataflash opcodes
 #define FlashPageRead			0x52	// Main memory page read
 #define FlashToBuf1Transfer 	0x53	// Main memory page to buffer 1 transfer
 #define Buf1Read				0x54	// Buffer 1 read
@@ -60,7 +60,7 @@
 #define Buf1ToFlash     		0x88	// Buffer 1 to main memory page program without built-in erase
 #define Buf2ToFlash		        0x89	// Buffer 2 to main memory page program without built-in erase
 #define PageErase               0x81	// Page erase, added by Martin Thomas
-*/
+
 //Command Opcode
 #define		MainMemoryPageRead					0xD2
 #define		ContinuousArrayReadLegacy			0xE8
@@ -84,7 +84,6 @@
 #define		MainMemoryPageProgramThroughBuffer1	0x82
 #define		MainMemoryPageProgramThroughBuffer2 0x85
 
-/*
 Enable Sector Protection 3DH + 2AH + 7FH + A9H
 Disable Sector Protection 3DH + 2AH + 7FH + 9AH
 Erase Sector Protection Register 3DH + 2AH + 7FH + CFH
@@ -94,7 +93,6 @@ Sector Lockdown 3DH + 2AH + 7FH + 30H
 Read Sector Lockdown Register 35H
 Program Security Register 9BH + 00H + 00H + 00H
 Read Security Register 77H
-*/
 
 #define		MainMemoryPagetoBuffer1Transfer		0x53
 #define		MainMemoryPagetoBuffer2Transfer		0x55
@@ -104,31 +102,43 @@ Read Security Register 77H
 //Auto Page Rewrite through Buffer 2 59H
 //Deep Power-down B9H
 //Resume from Deep Power-down ABH
-#define		StatusRegisterRead					0xD7
 //Manufacturer and Device ID Read 9FH
 
 #define Status_RDYBUSY 0x80
+*/
 
 class DataFlash : Print {
-	byte pin_cs;
+	const byte pin_cs;
 	//
-	unsigned int bytesPerPage;
-	unsigned int pageAddressBits;
+	word bytesPerPage;
+	byte bitWidthPerPage;
 	//
-	unsigned int cachedPage[2];
-	bool cached[2];
-	unsigned long writepointer, readpointer;
+	boolean cached[2];
+	word pageCached[2];
+	byte currentBuffer;
 
 private:
-//	unsigned char DF_SPI_RW (unsigned char output);
-//	void DF_SPI_init (void);
 
-	// no select/deselect actions
-	inline boolean _status();
-	inline boolean _notBusy();
+	const byte StatusRegisterRead = 0xD7;
+	const byte Status_RDYBUSY = 0x80;
+	const byte Buffer1Read = 0xD4;
+	const byte Buffer2Read = 0xD6;
+	const byte Buffer1Write = 0x84;
+	const byte Buffer2Write = 0x87;
+
+	boolean DataFlash::_notBusy() {
+		SPI.transfer(StatusRegisterRead);
+		return SPI.transfer(0) & Status_RDYBUSY;
+	}
+
+	byte DataFlash::_status() {
+		SPI.transfer(StatusRegisterRead);
+		return SPI.transfer(0);
+	}
+
 	
 public:
-	DataFlash(byte);
+	DataFlash(byte cs = 5);
 	~DataFlash() {}
 	boolean init(void);
 	inline boolean begin() { return init(); }
@@ -140,9 +150,13 @@ public:
 	void select(void);
 	inline void setSPIMode(void);
 
-	void PageToBufferTransfer (unsigned int addr, byte bufsel = 1);
-	unsigned char BufferRead (unsigned int addr, byte bufsel = 1);
-	void BufferRead (unsigned int addr, unsigned int length, unsigned char *BufferPtr);
+	void cachePage (unsigned int addr, byte bufsel = 1);
+	byte bufferRead (word offaddr);
+//	void bufferRead (word offset, word length, unsigned char *BufferPtr);
+
+
+
+
 	void Buffer_Write_Enable (unsigned int IntPageAdr);
 	void BufferWrite (unsigned int IntPageAdr, unsigned char data, byte bufsel = 1);
 	void BufferWrite (unsigned int IntPageAdr, unsigned int No_of_bytes, unsigned char *BufferPtr);
@@ -152,7 +166,7 @@ public:
 	void ContinuousArrayRead(unsigned long addr, byte array[], byte stop) { ContinuousArrayRead(addr, array, stop, true); }
 	void ContinuousArrayRead(unsigned long addr, byte array[]) { ContinuousArrayRead(addr, array, 0, false); }
 	
-	void reset();
+//	void reset();
 	virtual int read();
 	virtual int read(unsigned long address );
 	virtual size_t write(byte b);
@@ -163,8 +177,8 @@ public:
 	void Page_Erase (unsigned int PageAdr); 
 	unsigned char Page_Buffer_Compare(unsigned int PageAdr); 
 	
-	unsigned int pageSize() { return bytesPerPage; }
-	unsigned int pageBits() { return pageAddressBits; }
+//	unsigned int pageSize() { return bytesPerPage; }
+//	unsigned int pageBits() { return pageAddressBits; }
 
 };
 // *****************************[ End Of DATAFLASH.H ]*****************************

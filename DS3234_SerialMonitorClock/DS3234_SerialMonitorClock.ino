@@ -17,16 +17,17 @@ DS3234 rtc(9);
 long clockval;
 
 void setup() {
-//  pinMode(10, OUTPUT);
-//  digitalWrite(10, HIGH);
-  
+
+  byte not_used_cs[] = { 4, 5, 10 };
+  for (int i = 0; i < sizeof(not_used_cs); i++) {
+    pinMode(not_used_cs[i], OUTPUT);
+    digitalWrite(not_used_cs[i], HIGH);
+  }
+
   Serial.begin(9600);
   Serial.println("Hi.");
   Serial.println();
 
-  pinMode(4, OUTPUT);
-  digitalWrite(4, HIGH);
-  
   SPI.begin();
   rtc.begin();
   delay(100);
@@ -35,7 +36,7 @@ void setup() {
     Serial.print(rtc.readRegister(DS3234::REGISTER_CONTROL)>>bp & 1, BIN);
   Serial.println("\n\nCONTROL_STATUS register");
   for (int bp = 7; bp >= 0; bp--)
-  Serial.print(rtc.readRegister(DS3234::REGISTER_CONTROL_STATUS)>>bp & 1, BIN);
+    Serial.print(rtc.readRegister(DS3234::REGISTER_CONTROL_STATUS)>>bp & 1, BIN);
   Serial.println();
   Serial.println();
   delay(100);
@@ -90,7 +91,7 @@ void loop() {
   if ( clockval != rtc.time ) {
     clockval = rtc.time;
     rtc.updateCalendar();
-    
+
     Serial.print("20");
     Serial.print(rtc.cal>>20&0x0f, HEX);
     Serial.print(rtc.cal>>16&0x0f, HEX);
@@ -121,6 +122,8 @@ void loop() {
     delay(100);
   }
 }
+
+
 
 
 

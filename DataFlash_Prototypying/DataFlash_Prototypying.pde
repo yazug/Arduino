@@ -1,15 +1,22 @@
 #include "SPI.h"
-#include "DataFlash.h"
+#include "DataFlash_SPI.h"
 
-DataFlash dflash(10); 
-char text[] = "  If thou beest he; But O how fall'n! how chang'd From him, who in the happy Realms of Light Cloth'd with transcendent brightnes didst outshine Myriads though bright: If he whom mutual league, United thoughts and counsels, equal hope, And hazard in the Glorious Enterprize, Joynd with me once, now misery hath joynd In equal ruin: into what Pit thou seest From what highth fal'n, so much the stronger provd He with his Thunder: and till then who knew The force of those dire Arms? yet not for those Nor what the Potent Victor in his rage Can else inflict do I repent or change, ";
+DataFlash dflash(5); 
+char text[] = "  If thou beest he; \nBut O how fall'n! how chang'd From him, \nwho in the happy Realms of Light \nCloth'd with transcendent brightnes didst outshine \nMyriads though bright: \nIf he whom mutual league, \nUnited thoughts and counsels, equal hope, \nAnd hazard in the Glorious Enterprize, \nJoynd with me once, now misery hath joynd \nIn equal ruin: into what \nPit thou seest \nFrom what highth fal'n, so much the stronger provd \nHe with his Thunder: and till then who knew \nThe force of those dire \nArms? yet not for those \nNor what the Potent Victor in his rage \nCan else inflict do I repent or change, ";
 unsigned long addr = 0;
 
 void setup() {
-  
-  SPI.begin(3,0);
-  Serial.begin(38400);
-  if ( ! dflash.init() ) {
+    byte not_used_cs[] = { 
+    4, 9, 10   };
+  for (int i = 0; i < sizeof(not_used_cs); i++) {
+    pinMode(not_used_cs[i], OUTPUT);
+    digitalWrite(not_used_cs[i], HIGH);
+  }
+
+  Serial.begin(57600);
+
+  SPI.begin();
+  if ( ! dflash.begin() ) {
     Serial.println(dflash.status(), BIN);
     Serial.println("Perhaps initialization has been failed.");
     while (true);
@@ -19,6 +26,15 @@ void setup() {
   Serial.print("Address Bits per page: ");
   Serial.println(dflash.pageBits());
   Serial.println();
+  goto skipped;
+  Serial.print("Writing text... ");
+  Serial.println(text);
+  dflash.write((const char*) text);
+  dflash.write('\n');
+  Serial.println("finished. ");
+//  dflash.flush();
+  dflash.reset();
+skipped:
   delay(1000);
 
 }
@@ -26,7 +42,6 @@ void setup() {
 void loop() {
   unsigned int i;
   byte c;
-  //dflash.write( text[addr%sizeof(text)]);
   c = dflash.read();
   if ( addr % 64 == 0 ) {
     Serial.println();

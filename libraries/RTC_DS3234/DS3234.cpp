@@ -35,9 +35,9 @@ boolean DS3234::init() {
 	pinMode(cs_pin, OUTPUT);
 	csHigh();
 	//
-	delayMicroseconds(100);
 	writeRegister(REGISTER_CONTROL, DEFAULT_REGISTER_CONTROL);
 	writeRegister(REGISTER_CONTROL_STATUS, DEFAULT_REGISTER_CONTROL_STATUS);
+	return readRegister(REGISTER_CONTROL);
 }
 
 byte * DS3234::transfer(byte reg, byte * buf, int num) {
