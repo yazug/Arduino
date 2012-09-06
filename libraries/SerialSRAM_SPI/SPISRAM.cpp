@@ -37,7 +37,7 @@ byte SPISRAM::read(const long & address) {
 	return data;
 }
 
-byte * SPISRAM::read(const long & address, byte *buffer, const long & size) {
+void * SPISRAM::read(const long & address, byte *buffer, const long & size) {
 	select();
 //	SPI.transfer(WRSR);
 //	SPI.transfer(SEQ_MODE);
@@ -47,7 +47,6 @@ byte * SPISRAM::read(const long & address, byte *buffer, const long & size) {
 	for (unsigned int i = 0; i < size; i++)
 		*p++ = SPI.transfer(0);
 	deselect();
-	return buffer;
 }
 
 void SPISRAM::write(const long & address, byte data) {

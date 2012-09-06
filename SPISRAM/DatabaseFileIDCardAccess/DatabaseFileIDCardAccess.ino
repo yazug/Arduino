@@ -1,8 +1,9 @@
 #include <SPI.h>
 #include "SD_SPI.h"
-#include "Des.h"
+//#include "Des.h"
 #include "TextStream.h"
 #include "SPISRAM.h"
+#include "DataFlash_SPI.h"
 
 #include "Wire.h"
 #include "PN532_I2C.h"
@@ -43,8 +44,10 @@ byte polling[] = {
   TypeF
 };
 
-const int SRAM_CS = 10;
-SPISRAM sram(SRAM_CS, SPISRAM::BUS_MBits); // CS pin
+const int SRAM_CS = 8;
+//SPISRAM sram(SRAM_CS, SPISRAM::BUS_MBits); // CS pin
+const int FLASH_CS = 5;
+DataFlash flash(5);
 
 long cardcount;
 RecordBuffer record;
@@ -53,17 +56,21 @@ void setup()
 {
   pinMode(9, OUTPUT);
   digitalWrite(9, HIGH);
+  pinMode(10, OUTPUT);
+  digitalWrite(10, HIGH);
   // Open serial communications and wait for port to open:
   Serial.begin(19200);
   while (!Serial);
   //delay(1000);
 
-  Serial.print("Initializing SD card... ");
-
   SPI.begin();  //pinMode(10, OUTPUT);
 
+  Serial.print("Initializing SD card... ");
   SD.begin() || (Serial.println("Card failed, or not present") && halt() );
   Serial.println("card initialized.");
+  
+  flash.begin();
+  Serial.println("Flash initialized.");
 
   File datafile = SD.open(datafname);
   if ( !datafile ) Serial.println("Failed to open data file.");
@@ -90,6 +97,9 @@ void setup()
           reol = true;
           continue;
         }
+        
+        Serial.print(cardcount);
+        Serial.print(" ");
 
         for(int i = 0; i < llen; i++) {
           if ( buf[i] == '\t' || buf[i] == ',' ) {
@@ -120,19 +130,19 @@ void setup()
               break;
             }
           }
-          //Serial.print(itn);
-          //Serial.print(buf+istart);
-          //Serial.print(", ");
+          Serial.print(itn);
+          Serial.print(buf+istart);
+          Serial.print(", ");
           itn++;
           istart += strlen(buf+istart);
         }
-        //        Serial.print(cnt);
-        //        Serial.print(" ");
-        //        record.printOn(Serial);
-        //        Serial.println();
-        //        if ( !dbfile.write(record.rawbytes, 32) )
-        //          Serial.println("write failed!!!");
-        sram.write(cardcount * 24, record.rawbytes, 24);
+//                Serial.print(cnt);
+//                Serial.print(" ");
+                record.printOn(Serial);
+                Serial.println('.');
+//                if ( !dbfile.write(record.rawbytes, 32) )
+//                  Serial.println("write failed!!!");
+        flash.write(cardcount * 24, record.rawbytes, 24);
         cardcount++;
         buf[0] = 0;
       }
@@ -145,7 +155,7 @@ void setup()
     Serial.println("Now reading data from Serial SRAM.");
     swatch = millis();
     for(long i = 0; i < cardcount; i++) {
-      sram.read(i*24, record.rawbytes, 24);
+      flash.read(i*24, record.rawbytes, 24);
       if ( i < 4 || i > cardcount - 4 ) {
         Serial.print(i);
         Serial.print(" ");
@@ -254,7 +264,7 @@ void loop()
 
             Serial.println(" msec.");
             Serial.println(pos);
-            sram.read(pos * 24, record.rawbytes, 24);
+            flash.read(pos * 24, record.rawbytes, 24);
             record.printOn(Serial);
 
           } 
@@ -293,7 +303,7 @@ int bsearch(long limit, char id[]) {
   long ix;
   while (ie > ib) {
     ix = (ib+ie)/2;
-    sram.read(ix * 24, r.rawbytes, 24);
+    flash.read(ix * 24, r.rawbytes, 24);
     int diff = memcmp(r.rawbytes, id, 11);
     
     r.printOn(Serial);

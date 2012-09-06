@@ -75,7 +75,7 @@ public:
 	inline void setSPIMode();
 
 	byte read(const long & address);
-	byte * read(const long & address, byte *buffer, const long & size);
+	void * read(const long & address, byte *buffer, const long & size);
 	void write(const long & address, byte data);
 	void write(const long & address, byte *buffer, const long & size);
 

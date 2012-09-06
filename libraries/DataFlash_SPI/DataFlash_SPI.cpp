@@ -50,13 +50,10 @@
 #include <SPI.h>
 #include "DataFlash_SPI.h"
 
+#define DEBUG
+
 DataFlash::DataFlash(byte cs) :
 		pin_cs(cs) {
-	bytesPerPage = 528;
-	bitWidthPerPage = 8;
-	pageCached[0] = 0;
-	pageCached[1] = 0;
-	currentBuffer = 0;
 }
 
 boolean DataFlash::init(void) {
@@ -78,8 +75,17 @@ boolean DataFlash::init(void) {
 		bytesPerPage = 528;
 		bitWidthPerPage = 10;
 	}
-	cachePage(0);
-	cachePage(1);
+	PageToBufferTransfer(0);
+	PageToBufferTransfer(1);
+	pageCached[0] = 0;
+	pageCached[1] = 1;
+#ifdef DEBUG
+	Serial.print("page read cache: ");
+	Serial.println(pageCached[0], HEX);
+	Serial.print("page read cache: ");
+	Serial.println(pageCached[1], HEX);
+#endif
+//	currentBuffer = 0;
 //	reset();
 	if ((stat & 0b00111100) != 0b00101100)
 		return false;
@@ -105,58 +111,63 @@ void DataFlash::reset() {
 }
 */
 
-int DataFlash::read(unsigned long addr) {
-	word page = addr / bytesPerPage; // 12 bits
-	word offset = addr % bytesPerPage; // 10 bits
+int DataFlash::read(const unsigned long & addr) {
+	word page = addr / bytesPerPage; // upper 12 bits
+	word offset = addr % bytesPerPage; // lower 10/9 bits
 	byte bufsel = page & 1;
 
-	if ( cachedPage[bufsel] != page) {
-		cachePage(page);
+	if ( pageCached[bufsel] != page) {
+		PageToBufferTransfer(page);
 		pageCached[bufsel] = page;
-		cached[bufsel] = true;
+#ifdef DEBUG
+		Serial.print("page read cache: ");
+		Serial.println(page, HEX);
+#endif
 	}
-	return bufferRead(addr);
+	return readBuffer( (bufsel<<15) | offset);
 }
 
-/*
-int DataFlash::read() {
-	return read(readpointer++);
+void * DataFlash::read(const unsigned long & addr, byte *buf, const long & n) {
+	for(unsigned long i = addr ; i <= addr+n; i++, buf++) {
+		*buf = (byte) read(i);
+	}
 }
-*/
-//
 
-size_t DataFlash::write(byte b, unsigned long addr) {
-	unsigned int pageAddr;
-	unsigned int byteAddr;
-	byte bufsel;
+size_t DataFlash::write(const unsigned long & addr, byte b) {
+	word page = addr / bytesPerPage; // upper 12 bits
+	word offset = addr % bytesPerPage; // lower 10/9 bits
+	byte bufsel = page & 1;
 
-	pageAddr = addr / bytesPerPage;  // 12 bits
-	byteAddr = addr % bytesPerPage; // 10 bits
-	bufsel = pageAddr & 0x01;
-	if (cached[bufsel] && (cachedPage[bufsel] == pageAddr)) {
-		BufferWrite(byteAddr, b, bufsel);
-		return 1;
+	if ( pageCached[bufsel] != page) {
+#ifdef DEBUG
+		Serial.print("cache write page: ");
+		Serial.print(pageCached[bufsel], HEX);
+#endif
+		BufferToPageProgram(pageCached[bufsel]);
+#ifdef DEBUG
+		Serial.println(" Ok. ");
+#endif
+#ifdef DEBUG
+		Serial.print("page read cache: ");
+		Serial.println(page, HEX);
+#endif
+		PageToBufferTransfer(page);
+		pageCached[bufsel] = page;
+#ifdef DEBUG
+		Serial.println(" Ok. ");
+#endif
 	}
-	if (!cached[bufsel]) {
-		PageToBufferTransfer(pageAddr, bufsel);
-		cachedPage[bufsel] = pageAddr;
-		cached[bufsel] = true;
-	}
-	if (cachedPage[bufsel] != pageAddr) {
-		BufferToPageTransfer(cachedPage[bufsel], bufsel);
-		PageToBufferTransfer(pageAddr, bufsel);
-		cached[bufsel] = true;
-		cachedPage[bufsel] = pageAddr;
-	}
-	BufferWrite(byteAddr, b, bufsel);
+
+	writeBuffer( (bufsel <<15) | offset, b);
 	return 1;
 }
 
-size_t DataFlash::write(byte b) {
-	return write(b, writepointer++);
+void DataFlash::write(const unsigned long & addr, byte *buf, const long & n) {
+	for(unsigned long i = addr ; i <= addr+n; i++, buf++) {
+		write(i, *buf);
+	}
 }
-
-
+/*
 void DataFlash::flush() {
 	unsigned int pageAddr;
 	unsigned int byteAddr;
@@ -170,7 +181,7 @@ void DataFlash::flush() {
 	}
 
 }
-
+*/
 /*****************************************************************************
  * 
  *	Function name : Page_To_Buffer
@@ -185,19 +196,19 @@ void DataFlash::flush() {
  * 					
  * 
  ******************************************************************************/
-void DataFlash::PageToBufferTransfer(unsigned int addr, byte bufsel) {
-//  deselect();				//make sure to toggle CS signal in order
+void DataFlash::PageToBufferTransfer(unsigned int page) {
+	byte bufsel = (page & 1) != 0;
 	select();				//to reset DataFlash command decoder
+	byte cmd[] = { MainMemoryPagetoBuffer1Transfer, MainMemoryPagetoBuffer2Transfer };
 
-	if ( bufsel == 0 ) {
-		SPI.transfer(MainMemoryPagetoBuffer1Transfer); //
+	SPI.transfer(cmd[bufsel]); //
+	if ( bytesPerPage == 528 ) {
+		page = page<<2;
 	} else {
-		SPI.transfer(MainMemoryPagetoBuffer2Transfer); // transfer to buffer 1 op-code
+		page = page<<1;
 	}
-	SPI.transfer((unsigned char) (addr >> (16 - pageAddressBits)));
-	//DF_SPI_RW((unsigned char)(PageAdr >> (16 - pageAddressBits)));
-	//upper part of page address
-	SPI.transfer((unsigned char) (addr << (pageAddressBits - 8)));
+	SPI.transfer( (byte) (page >> 8) );
+	SPI.transfer( (byte) page );
 	//DF_SPI_RW//lower part of page address
 	SPI.transfer(0); //DF_SPI_RW(0x00);						//don't cares
 
@@ -223,13 +234,18 @@ void DataFlash::PageToBufferTransfer(unsigned int addr, byte bufsel) {
  *					internal SRAM buffers
  * 
  ******************************************************************************/
-byte DataFlash::bufferRead(word offaddr) {
-	byte bufsel = (offaddr / bytesPerPage) & 1;
-	offaddr = bytesPerPage % offaddr;
+byte DataFlash::readBuffer(word offaddr) {
+	byte bufsel = (offaddr & (1<<15)) != 0;
+	offaddr &= ~(1<<15);
 	unsigned char data;
-//  data='0'; // mt 
-//  deselect();				//make sure to toggle CS signal in order
-	select();				//to reset DataFlash command decoder
+
+#ifdef DEBUG_MORE
+	Serial.print(" read buffer ");
+	Serial.print(bufsel+1, DEC);
+	Serial.print(": ");
+	Serial.println(offaddr, HEX);
+#endif
+	select();
 	if ( bufsel ) {
 		SPI.transfer(Buffer2Read); //DF_SPI_RW(Buffer1Read);			//buffer 1 read op-code
 	} else {
@@ -237,7 +253,7 @@ byte DataFlash::bufferRead(word offaddr) {
 	}
 	SPI.transfer((byte) 0x00); //DF_SPI_RW(0x00);				//don't cares
 	SPI.transfer((byte) (offaddr >> 8)); // DF_SPI_RW( //upper part of internal buffer address
-	SPI.transfer((byte) (offaddr)); //DF_SPI_RW(	//lower part of internal buffer address
+	SPI.transfer((byte) offaddr & 0xff); //DF_SPI_RW(	//lower part of internal buffer address
 	SPI.transfer((byte) 0x00); //DF_SPI_RW(0x00);				//don't cares
 	data = SPI.transfer((byte) 0x00); //DF_SPI_RW(0x00);			//read byte
 	deselect();
@@ -265,6 +281,7 @@ byte DataFlash::bufferRead(word offaddr) {
  * 
  * 
  ******************************************************************************/
+/*
 void DataFlash::BufferRead(unsigned int addr, unsigned int length,
 		unsigned char *ptr) {
 	unsigned int i;
@@ -283,6 +300,7 @@ void DataFlash::BufferRead(unsigned int addr, unsigned int length,
 	deselect();
 
 }
+*/
 //NB : Sjekk at (IntAdr + No_of_bytes) < buffersize, hvis ikke blir det bare ball..
 //mtA 
 // translation of the Norwegian comments (thanks to Eirik Tveiten):
@@ -307,6 +325,7 @@ void DataFlash::BufferRead(unsigned int addr, unsigned int length,
  *			this mode before accessing other DataFlash functionalities 
  * 
  ******************************************************************************/
+/*
 void DataFlash::Buffer_Write_Enable(unsigned int IntPageAdr) {
 //  deselect();				//make sure to toggle CS signal in order
 	select();				//to reset DataFlash command decoder
@@ -317,6 +336,7 @@ void DataFlash::Buffer_Write_Enable(unsigned int IntPageAdr) {
 	SPI.transfer((byte) (IntPageAdr));	//lower part of internal buffer address
 	deselect();
 }
+*/
 /*****************************************************************************
  *  
  *	Function name : Buffer_Write_Byte
@@ -334,7 +354,15 @@ void DataFlash::Buffer_Write_Enable(unsigned int IntPageAdr) {
  *					internal SRAM buffers
  *
  ******************************************************************************/
-void DataFlash::BufferWrite(unsigned int IntPageAdr, byte data, byte bufsel) {
+void DataFlash::writeBuffer(word offaddr, byte data) {
+	byte bufsel = (offaddr & (1<<15)) != 0;
+	offaddr &= ~(1<<15);
+#ifdef DEBUG_MORE
+	Serial.print(" write buffer ");
+	Serial.print(bufsel+1, DEC);
+	Serial.print(": ");
+	Serial.println(offaddr, HEX);
+#endif
 //  deselect();				//make sure to toggle CS signal in order
 	select();				//to reset DataFlash command decoder
 	if (bufsel == 1) {
@@ -343,8 +371,8 @@ void DataFlash::BufferWrite(unsigned int IntPageAdr, byte data, byte bufsel) {
 		SPI.transfer(Buffer1Write); //buffer 1 write op-code
 	}
 	SPI.transfer(0);	// DF_SPI_RW(0x00);				//don't cares
-	SPI.transfer((byte) (IntPageAdr >> 8)); //  DF_SPI_RW((unsigned char)(IntPageAdr>>8));//upper part of internal buffer address
-	SPI.transfer((byte) (IntPageAdr)); // DF_SPI_RW((unsigned char)(IntPageAdr));	//lower part of internal buffer address
+	SPI.transfer((byte) (offaddr >> 8)); //  DF_SPI_RW((unsigned char)(IntPageAdr>>8));//upper part of internal buffer address
+	SPI.transfer((byte) (offaddr)); // DF_SPI_RW((unsigned char)(IntPageAdr));	//lower part of internal buffer address
 	SPI.transfer(data); //DF_SPI_RW(Data);				//write data byte
 	deselect();
 }
@@ -372,7 +400,9 @@ void DataFlash::BufferWrite(unsigned int IntPageAdr, byte data, byte bufsel) {
  *			pointed to by *BufferPtr
  * 
  ******************************************************************************/
-void DataFlash::BufferWrite(unsigned int IntPageAdr, unsigned int No_of_bytes,
+/*
+
+void DataFlash::writeBuffer(unsigned int IntPageAdr, unsigned int No_of_bytes,
 		byte *BufferPtr) {
 	unsigned int i;
 //  deselect();				//make sure to toggle CS signal in order
@@ -389,7 +419,7 @@ void DataFlash::BufferWrite(unsigned int IntPageAdr, unsigned int No_of_bytes,
 	deselect();
 
 }
-
+*/
 //NB : Monitorer busy-flag i status-reg.
 //NB : Sjekk at (IntAdr + No_of_bytes) < buffersize, hvis ikke blir det bare ball..
 //mtA 
@@ -413,8 +443,8 @@ void DataFlash::BufferWrite(unsigned int IntPageAdr, unsigned int No_of_bytes,
  *			 
  ******************************************************************************/
 
-void DataFlash::cachePage(unsigned int page) {
-	byte bufsel = page & 1;
+void DataFlash::BufferToPageProgram(unsigned int dstpage) {
+	byte bufsel = dstpage & 1;
 //  deselect();	//make sure to toggle CS signal in order
 	select();	//to reset DataFlash command decoder
 	if (bufsel == 1) {
@@ -426,10 +456,15 @@ void DataFlash::cachePage(unsigned int page) {
 		//DF_SPI_RW(Buffer1toMainMemoryPageProgramWithBuiltinErase);
 		//buffer 1 to flash with erase op-code
 	}
-	SPI.transfer((byte) (PageAdr >> (16 - pageAddressBits)));
+	if ( bytesPerPage == 528 ) {
+		dstpage = dstpage << 2;
+	} else {
+		dstpage = dstpage << 1;
+	}
+	SPI.transfer((byte) (dstpage >> 8));
 	//DF_SPI_RW((unsigned char)(PageAdr >> (16 - pageAddressBits)));
 	//upper part of page address
-	SPI.transfer((byte) (PageAdr << (pageAddressBits - 8)));
+	SPI.transfer((byte) dstpage);
 	//DF_SPI_RW((unsigned char)(PageAdr << (pageAddressBits - 8)));
 	//lower part of page address
 	SPI.transfer((byte) 0x00);
@@ -456,15 +491,15 @@ void DataFlash::cachePage(unsigned int page) {
  *	Purpose :	Initiates a continuous read from a location in the DataFlash
  * 
  ******************************************************************************/
-void DataFlash::Cont_Flash_Read_Enable(unsigned int PageAdr,
+/*
+void DataFlash::Cont_Flash_Read_Enable(unsigned int addr,
 		unsigned int IntPageAdr) {
 //  deselect();	//make sure to toggle CS signal in order
 	select();	//to reset DataFlash command decoder
 	SPI.transfer(ContinuousArrayReadLegacy);	//Continuous Array Read op-code
-	SPI.transfer((byte) (PageAdr >> (16 - pageAddressBits)));//upper part of page address
-	SPI.transfer(
-			(byte) ((PageAdr << (pageAddressBits - 8)) + (IntPageAdr >> 8)));//lower part of page address and MSB of int.page adr.
-	SPI.transfer((byte) (IntPageAdr));		//LSB byte of internal page address
+	SPI.transfer((byte) (addr >> (24 - bitWidthPerPage)));//upper part of page address
+	SPI.transfer((byte) (addr >> (16 - bitWidthPerPage) & 0xff));//lower part of page address and MSB of int.page adr.
+	SPI.transfer((byte) (addr & 0xff));		//LSB byte of internal page address
 	SPI.transfer((byte) 0x00);							//perform 4 dummy writes
 	SPI.transfer((byte) 0x00);					//in order to intiate DataFlash
 	SPI.transfer((byte) 0x00);								//address pointers
@@ -503,7 +538,7 @@ void DataFlash::ContinuousArrayRead(unsigned long addr, byte array[],
 	}
 	deselect();
 }
-
+*/
 //#ifdef MTEXTRAS
 /*****************************************************************************
  *  
@@ -522,6 +557,7 @@ void DataFlash::ContinuousArrayRead(unsigned long addr, byte array[],
  *   included by ATMEL
  * 
  ******************************************************************************/
+/*
 unsigned char DataFlash::Page_Buffer_Compare(unsigned int PageAdr) {
 	byte stat;
 	select();					//to reset DataFlash command decoder
@@ -540,6 +576,7 @@ unsigned char DataFlash::Page_Buffer_Compare(unsigned int PageAdr) {
 	deselect();
 	return (stat & 0x40);
 }
+*/
 /*****************************************************************************
  * 
  * 
@@ -554,12 +591,12 @@ unsigned char DataFlash::Page_Buffer_Compare(unsigned int PageAdr) {
  *	function added by mthomas. 
  *
  ******************************************************************************/
-void DataFlash::Page_Erase(unsigned int PageAdr) {
+void DataFlash::Page_Erase(unsigned int page) {
 //  deselect();																//make sure to toggle CS signal in order
 	select();								//to reset DataFlash command decoder
 	SPI.transfer(PageErase);						//Page erase op-code
-	SPI.transfer((byte) (PageAdr >> (16 - pageAddressBits)));//upper part of page address
-	SPI.transfer((byte) (PageAdr << (pageAddressBits - 8)));//lower part of page address and MSB of int.page adr.
+	SPI.transfer((byte) (page >> 8) );//upper part of page address
+	SPI.transfer((byte) (page & 0xff));//lower part of page address and MSB of int.page adr.
 	SPI.transfer((byte) 0x00);	// "dont cares"
 	deselect();						//initiate flash page erase
 	select();
