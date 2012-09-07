@@ -141,10 +141,10 @@ private:
 		return SPI.transfer(0);
 	}
 
-	void readBuffer(word offaddr, byte * b, const word n);
-	inline byte readBuffer(word offaddr);
-	void writeBuffer(word offaddr, byte *b, const word n);
-	inline void writeBuffer(word offaddr, byte b);
+	void readBuffer(const boolean select, const word offset, byte * b, const word n);
+	inline byte readBuffer(const boolean select, const word offset);
+	void writeBuffer(const boolean select, const word offset, byte *b, const word n);
+	inline void writeBuffer(const boolean select, const word offset, byte b);
 	void BufferToPageProgram(unsigned int dstpage);
 	void PageToBufferTransfer(unsigned int page);
 

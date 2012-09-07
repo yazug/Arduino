@@ -34,7 +34,7 @@ void setup()
   SPI.begin();  //pinMode(10, OUTPUT);
 
   Serial.print("Initializing SD card... ");
-  SD.begin() || (Serial.println("Card failed, or not present") && halt() );
+  SD.begin() || (Serial.println("Card failed, or not present") );
   Serial.println("card initialized.");
 
   flash.begin();
@@ -46,10 +46,11 @@ void setup()
   //  if ( !dbfile ) Serial.println("Failed to open db file.");
 
   long swatch = millis();
+    long count = 1450;
   if (datafile) {
+    count = 0;
     buf[0] = 0;
     TextStream rw(datafile);
-    long count = 0;
     while (rw.available()) {
       // seems to wait for around 35 millisec for the first char ...
       if ( rw.concateLine((char*) buf, 127, 50) || (datafile.size() == datafile.position()) ) {
@@ -62,6 +63,9 @@ void setup()
           Serial.print(count);
           Serial.print(" ");
           Serial.println((char*)buf);
+        } 
+        else {
+          if ( (count % 100) == 0 ) Serial.print('.');
         }
         flash.write(count*15, buf, 15);
         count++;
@@ -74,36 +78,36 @@ void setup()
     Serial.println(millis() - swatch);
     Serial.println("Loading data finished.");
     Serial.println();
-    Serial.println("Now reading data from Flash memory.");
-    swatch = millis();
-    for(long i = 0; i < count; i++) {
-      flash.read(i*15, buf, 15);
-      buf[15] = 0;
-      if ( i < 4 || i > count - 8 ) {
-        Serial.print(i);
-        Serial.print(" ");
-        Serial.print((char*) buf);
-        Serial.println();
-      }
-    }
-    Serial.println(millis() - swatch);
-    Serial.println("Dumping ");
-    Serial.print(count);
-    Serial.println(" x 15 bytes data finished.");
-    Serial.println();
-
-    swatch = millis();
-    Serial.println("Search by type, division, pid and issue no.");
-    int pos = bsearch(count, "16	S	82541854	1");
-    Serial.print(millis() - swatch);
-    Serial.println(" msec.");
-    Serial.println(pos);
-  }  
-  // if the file isn't open, pop up an error:
+  }  // if the file isn't open, pop up an error:
   else {
     Serial.print("error opening ");
     Serial.println(datafname);
   } 
+
+  Serial.println("Now reading data from Flash memory.");
+  swatch = millis();
+  for(long i = 0; i < count; i++) {
+    flash.read(i*15, buf, 15);
+    buf[15] = 0;
+    if ( i <  5 || i > count - 12 ) {
+      Serial.print(i);
+      Serial.print(" ");
+      Serial.print((char*) buf);
+      Serial.println();
+    }
+  }
+  Serial.println(millis() - swatch);
+  Serial.println("Dumping ");
+  Serial.print(count);
+  Serial.println(" x 15 bytes data finished.");
+  Serial.println();
+
+  swatch = millis();
+  Serial.println("Search by type, division, pid and issue no.");
+  int pos = bsearch(count, "16	S	82541854	1");
+  Serial.print(millis() - swatch);
+  Serial.println(" msec.");
+  Serial.println(pos);
 
   halt();
   delay(500);
@@ -160,6 +164,7 @@ int bsearch(long limit, char id[]) {
   }
   return -1;
 }
+
 
 
 

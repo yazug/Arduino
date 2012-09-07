@@ -24,7 +24,7 @@ void setup() {
     digitalWrite(not_used_cs[i], HIGH);
   }
 
-  Serial.begin(9600);
+  Serial.begin(19200);
   Serial.println("Hi.");
   Serial.println();
 
