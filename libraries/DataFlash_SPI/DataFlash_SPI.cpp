@@ -230,7 +230,6 @@ void DataFlash::PageToBufferTransfer(unsigned int page) {
 void DataFlash::readBuffer(word offset, byte *data, const word n) {
 	byte bufsel = (offset & (1 << 15)) != 0;
 	word addr = offset & ~(1 << 15);
-	word limit = min(n, bytesPerPage);
 #ifdef DEBUG_MORE
 	Serial.print(" read buffer ");
 	Serial.print(bufsel+1, DEC);
@@ -355,7 +354,6 @@ byte DataFlash::readBuffer(word offaddr) {
 void DataFlash::writeBuffer(word offset, byte * data, const word n) {
 	byte bufsel = (offset & (1 << 15)) != 0;
 	word addr = offset & ~(1 << 15);
-	word limit = min(n, bytesPerPage);
 #ifdef DEBUG_MORE
 	Serial.print(" write buffer ");
 	Serial.print(bufsel+1, DEC);
@@ -374,7 +372,7 @@ void DataFlash::writeBuffer(word offset, byte * data, const word n) {
 	//don't cares
 	SPI.transfer((byte) (addr >> 8)); //  DF_SPI_RW((unsigned char)(IntPageAdr>>8));//upper part of internal buffer address
 	SPI.transfer((byte) (addr)); // DF_SPI_RW((unsigned char)(IntPageAdr));	//lower part of internal buffer address
-	for (int i = 0; i < limit; i++) {
+	for (int i = 0; i < n; i++) {
 		SPI.transfer(*data++);
 		//DF_SPI_RW(Data);	//write data byte
 	}
