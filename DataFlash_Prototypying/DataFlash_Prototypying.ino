@@ -7,13 +7,14 @@ unsigned long addr = 0;
 
 void setup() {
   byte not_used_cs[] = { 
-    4, 9, 10         };
+    4, 9, 10 
+  };
   for (int i = 0; i < sizeof(not_used_cs); i++) {
     pinMode(not_used_cs[i], OUTPUT);
     digitalWrite(not_used_cs[i], HIGH);
   }
 
-  Serial.begin(57600);
+  Serial.begin(19200);
   Serial.flush();
   
   SPI.begin();
@@ -27,19 +28,18 @@ void setup() {
   Serial.print("Address Bits per page: ");
   Serial.println(dflash.pageBits());
   Serial.println();
-  Serial.print("Writing text... ");
-//  goto skipped;
+//goto skipped;
+  Serial.println("Writing text... ");
     Serial.println(text);
     dflash.write(0, (byte*)text, sizeof(text));
   //  dflash.write('\n');
   Serial.println("finished. ");
-  //  dflash.flush();
-  //  dflash.reset();
+  dflash.flush();
 skipped:
   delay(1000);
 
   char c;
-  for( addr = 0; addr < strlen(text); addr++) {
+  for( addr = 0; addr < sizeof(text); addr++) {
     if ( (addr % 0x100) == 0 ) {
       Serial.println();
       Serial.print(addr>>16&0x0f, HEX);
@@ -51,10 +51,14 @@ skipped:
       Serial.println();
     }
     c = dflash.read(addr);
+    if ( c == 0 ) {
+      Serial.println();
+      continue;
+    }
     Serial.print(c);
     delay(20);
   }
-
+  Serial.println(" --- end ----");
 }
 
 void loop() {

@@ -141,8 +141,10 @@ private:
 		return SPI.transfer(0);
 	}
 
-	byte readBuffer(word offaddr);
-	void writeBuffer(word offaddr, byte b);
+	void readBuffer(word offaddr, byte * b, const word n);
+	inline byte readBuffer(word offaddr);
+	void writeBuffer(word offaddr, byte *b, const word n);
+	inline void writeBuffer(word offaddr, byte b);
 	void BufferToPageProgram(unsigned int dstpage);
 	void PageToBufferTransfer(unsigned int page);
 
@@ -184,11 +186,11 @@ public:
 */
 //	void reset();
 //	virtual int read();
-	virtual int read(const unsigned long & addr);
-	void * read(const unsigned long & address, byte *buffer, const long & size);
+	byte read(const unsigned long & addr);
+	void read(const unsigned long & address, byte *buffer, const long & size);
 //	virtual size_t write(byte b);
 //	using Print::write;
-	virtual size_t write(const unsigned long & addr, byte b);
+	void write(const unsigned long & addr, byte b);
 	void write(const unsigned long & address, byte *buffer, const long & size);
 	void flush();
 
