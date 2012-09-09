@@ -102,9 +102,8 @@ class DataFlash /*: Print */ {
 	word bytesPerPage;
 	byte bitWidthPerPage;
 	//
-	word pageCached[2];
-	boolean pageModified[2];
-//	byte currentBuffer;
+	word pageCached;
+	boolean cacheModified;
 
 private:
 
@@ -141,10 +140,10 @@ private:
 		return SPI.transfer(0);
 	}
 
-	void readBuffer(const boolean select, const word offset, byte * b, const word n);
-	inline byte readBuffer(const boolean select, const word offset);
-	void writeBuffer(const boolean select, const word offset, byte *b, const word n);
-	inline void writeBuffer(const boolean select, const word offset, byte b);
+	void readBuffer(const word offset, byte * b, const word n);
+	inline byte readBuffer(const word offset);
+	void writeBuffer(const word offset, byte *b, const word n);
+	inline void writeBuffer(const word offset, byte b);
 	void BufferToPageProgram(unsigned int dstpage);
 	void PageToBufferTransfer(unsigned int page);
 

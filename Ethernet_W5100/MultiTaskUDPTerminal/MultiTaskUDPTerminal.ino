@@ -7,6 +7,7 @@
 #include "ISO14443.h"
 //#include "SD_SPI.h"
 //#include "SPISRAM.h"
+#include "DataFlash_SPI.h"
 
 #include "Des.h"
 #include "TextStream.h"
@@ -38,11 +39,11 @@ byte ip[] = {
   192,168,1, 177 };
 //byte subnet[] = { 255, 255, 255, 0 };
 //byte gtway[] = { 192, 168, 1, 1 };
-const unsigned int DoorControllerCommandPort = 7602;
-EthernetServer server(DoorControllerCommandPort);
+const unsigned int PORT_COMMAND = 7602;
+EthernetUDP udpPort;
 
 TextStream mon(Serial);
-EthernetClient client;
+//EthernetClient client;
 long client_idle_since = 0;
 enum {
   DISCONNECTED,
@@ -55,6 +56,7 @@ int listix;
 DS3234 rtc_spi(9);
 long lastrtcupdate;
 
+DataFlash dflash(5);
 /*
 const int SD_CS = 4;
 SDClass sd(SD_CS);
@@ -67,12 +69,12 @@ SdFile root;
 byte buf[128];
 long stwatch;
 
-Des codec((byte*)uni_key);
+//Des codec((byte*)uni_key);
 
 void setup() {
   // Open serial communications and wait for port to open:
   Serial.begin(19200);
-  mon << "starting Ethernet terminal test on port " << DoorControllerCommandPort << "." << endl;
+  mon << "starting Ethernet terminal test on port " << PORT_COMMAND << "." << endl;
 
   if ( EEPROM.read(0) == 0x9e && EEPROM.read(1) == 'I' ) {
     EEPROM_read(2, mac, 6);
@@ -92,7 +94,7 @@ void setup() {
   rtc_spi.begin();
   // start the Ethernet connection and the server:
   Ethernet.begin(mac, ip);
-  server.begin();
+  udpPort.begin(PORT_COMMAND);
   mon << "server is at " << Ethernet.localIP() << endl;
 
   Wire.begin();
@@ -235,18 +237,13 @@ char tmp[32];
     mon << "Task > 250 msec " << stwatch << " millis to " << (byte) reader_status << endl;
 
 
-  if ( !client ) {
-    if ( client = server.available() ) {
-      client_idle_since = millis();
-      server_status = CONNECTED;
-      mon << "A New client started." << endl;
-    }
-  } 
-  else if ( server_status == CONNECTED ) {
+  if ( server_status == DISCONNECTED ) {
+    server_status = CONNECTED;
+  } else if (server_status == CONNECTED) {
     if (millis() < client_idle_since + 30000L  ) {
       // an http request ends with a blank line
-      if ( client.connected() && client.available() ) {
-        TextStream cmon(client);
+      if ( udpPort.available() ) {
+        TextStream cmon(udpPort);
         if ( cmon.readLine((char*)buf, 127) > 0 ) {
           for(int i = 0; buf[i] ; i++) 
             buf[i] = toupper(buf[i]);
@@ -324,7 +321,7 @@ char tmp[32];
           else if ( len > 0 && strncmp((char*)buf+pos, "QUIT", len) == 0 ) {
             cmon << ">> " << "bye bye." << endl;
             delay(5);
-            client.stop();
+            udpPort.stop();
             server_status = DISCONNECTED;
             mon << "disonnected client." << endl;
           }
@@ -336,13 +333,13 @@ char tmp[32];
       // close the connection:
     } 
     else {
-      client.stop();
+      udpPort.stop();
       mon << "disonnected client by timeout." << endl;
     }
   } 
   else if ( server_status == LISTING ) {
     current = millis();
-    TextStream cmon(client);
+    TextStream cmon(udpPort);
     for( /* value is set already */; 
     listix < cardlog.count() && millis() < current + 200 ; listix++) {
         if ( listix == 0 ) {

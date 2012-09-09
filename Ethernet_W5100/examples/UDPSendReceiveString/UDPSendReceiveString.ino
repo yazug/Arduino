@@ -14,7 +14,7 @@
 
 
 #include <SPI.h>         // needed for Arduino versions later than 0018
-#include <Ethernet.h>
+#include <Ethernet_w5100.h>
 #include <EthernetUdp.h>         // UDP library from: bjoern@cs.stanford.edu 12/30/2008
 
 
@@ -22,9 +22,9 @@
 // The IP address will be dependent on your local network:
 byte mac[] = {  
   0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
-IPAddress ip(192, 168, 1, 177);
+IPAddress ip(192, 168, 24, 177);
 
-unsigned int localPort = 8888;      // local port to listen on
+unsigned int localPort = 7602;      // local port to listen on
 
 // buffers for receiving and sending data
 char packetBuffer[UDP_TX_PACKET_MAX_SIZE]; //buffer to hold incoming packet,
@@ -34,11 +34,22 @@ char  ReplyBuffer[] = "acknowledged";       // a string to send back
 EthernetUDP Udp;
 
 void setup() {
+  pinMode(4, OUTPUT);
+  digitalWrite(4, HIGH);
+  pinMode(5, OUTPUT);
+  digitalWrite(5, HIGH);
+  pinMode(9, OUTPUT);
+  digitalWrite(9, HIGH);
+  
+  Serial.begin(9600);
+  Serial.println("Hi.");
+
+  SPI.begin();
   // start the Ethernet and UDP:
   Ethernet.begin(mac,ip);
+Serial.print("started");
   Udp.begin(localPort);
-
-  Serial.begin(9600);
+Serial.println(".");
 }
 
 void loop() {

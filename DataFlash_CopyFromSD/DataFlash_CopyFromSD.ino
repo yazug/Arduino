@@ -46,7 +46,7 @@ void setup()
   //  if ( !dbfile ) Serial.println("Failed to open db file.");
 
   long swatch = millis();
-    long count = 1450;
+  long count = 1450;
   if (datafile) {
     count = 0;
     buf[0] = 0;
@@ -59,7 +59,7 @@ void setup()
           continue;
         }
         buf[15] = 0;
-        if ( count < 4 || count > 1440 ) {
+        if ( count < 4 ) {
           Serial.print(count);
           Serial.print(" ");
           Serial.println((char*)buf);
@@ -72,9 +72,10 @@ void setup()
         buf[0] = 0;
       }
     }
-    datafile.close();
     flash.flush();
+    datafile.close();
     //    dbfile.close();
+    Serial.println();
     Serial.println(millis() - swatch);
     Serial.println("Loading data finished.");
     Serial.println();
@@ -89,12 +90,12 @@ void setup()
   for(long i = 0; i < count; i++) {
     flash.read(i*15, buf, 15);
     buf[15] = 0;
-    if ( i <  5 || i > count - 12 ) {
+    //if ( i <  5 || i > count - 12 ) {
       Serial.print(i);
       Serial.print(" ");
       Serial.print((char*) buf);
       Serial.println();
-    }
+    //}
   }
   Serial.println(millis() - swatch);
   Serial.println("Dumping ");

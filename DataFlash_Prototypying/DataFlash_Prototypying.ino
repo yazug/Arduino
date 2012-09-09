@@ -1,9 +1,13 @@
+#include <avr/pgmspace.h>
+
 #include "SPI.h"
 #include "DataFlash_SPI.h"
 
+#include "text.h"
+
 DataFlash dflash(5); 
-char text[] = "Paradise Lost: \n John Milton\n  If thou beest he; \nBut O how fall'n! how chang'd From him, \nwho in the happy Realms of Light \nCloth'd with transcendent brightnes didst outshine \nMyriads though bright: \nIf he whom mutual league, \nUnited thoughts and counsels, equal hope, \nAnd hazard in the Glorious Enterprize, \nJoynd with me once, now misery hath joynd \nIn equal ruin: into what \nPit thou seest \nFrom what highth fal'n, so much the stronger provd \nHe with his Thunder: and till then who knew \nThe force of those dire \nArms? yet not for those \nNor what the Potent Victor in his rage \nCan else inflict do I repent or change, ";
 unsigned long addr = 0;
+char buffer[16];
 
 void setup() {
   byte not_used_cs[] = { 
@@ -16,7 +20,8 @@ void setup() {
 
   Serial.begin(19200);
   Serial.flush();
-  
+  Serial.println("Hi.");
+
   SPI.begin();
   if ( ! dflash.begin() ) {
     Serial.println(dflash.status(), BIN);
@@ -28,18 +33,24 @@ void setup() {
   Serial.print("Address Bits per page: ");
   Serial.println(dflash.pageBits());
   Serial.println();
-//goto skipped;
+  //goto skipped;
   Serial.println("Writing text... ");
-    Serial.println(text);
-    dflash.write(0, (byte*)text, sizeof(text));
+  word textlength = strlen_P(text);
+  for(int i = 0; i < textlength; i += 16) {
+    memcpy_P(buffer, text+i, 16);
+    dflash.write(i, (byte*) buffer, 16);
+   // dflash.read(i, (byte*) buffer, 16);
+    buffer[16] = 0;
+    Serial.print((char*)buffer);
+  }
   //  dflash.write('\n');
-  Serial.println("finished. ");
+  Serial.println(" writing finished. ");
   dflash.flush();
 skipped:
   delay(1000);
 
   char c;
-  for( addr = 0; addr < sizeof(text); addr++) {
+  for( addr = 0; addr < strlen(text); addr++) {
     if ( (addr % 0x100) == 0 ) {
       Serial.println();
       Serial.print(addr>>16&0x0f, HEX);
@@ -48,7 +59,6 @@ skipped:
       Serial.print(addr>>4&0x0f, HEX);
       Serial.print(addr& 0x0f, HEX);
       Serial.println(": ");
-      Serial.println();
     }
     c = dflash.read(addr);
     if ( c == 0 ) {
@@ -56,13 +66,14 @@ skipped:
       continue;
     }
     Serial.print(c);
-    delay(20);
+    delay(5);
   }
   Serial.println(" --- end ----");
 }
 
 void loop() {
 }
+
 
 
 
