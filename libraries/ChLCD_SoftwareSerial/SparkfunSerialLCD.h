@@ -2,8 +2,8 @@
  * by sin
  */
 
-#ifndef SerialLCD_h
-#define SerialLCD_h
+#ifndef SparkfunSerialLCD_h
+#define SparkfunSerialLCD_h
 
 /*
  #if ARDUINO >= 100

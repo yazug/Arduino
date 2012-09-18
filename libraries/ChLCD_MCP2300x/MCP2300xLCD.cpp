@@ -4,10 +4,10 @@
 #else
 #include <WProgram.h>
 #endif
-#include "xLCD.h"
+#include "MCP2300xLCD.h"
 
 
-xLCD::xLCD(uint8_t i2cAddr, uint8_t rs, uint8_t rw, uint8_t en,
+MCP2300xLCD::MCP2300xLCD(uint8_t i2cAddr, uint8_t rs, uint8_t rw, uint8_t en,
 		   uint8_t d0, uint8_t d1, uint8_t d2, uint8_t d3, uint8_t bklight) :
 	xpander(i2cAddr)
 {
@@ -27,14 +27,14 @@ xLCD::xLCD(uint8_t i2cAddr, uint8_t rs, uint8_t rw, uint8_t en,
 }
 
 /*
-xLCD::xLCD(MCP23009 iox, uint8_t rs,  uint8_t en,
+MCP2300xLCD::MCP2300xLCD(MCP23009 iox, uint8_t rs,  uint8_t en,
 			     uint8_t d0, uint8_t d1, uint8_t d2, uint8_t d3) : 
-	xLCD(iox, rs, -1, en, d0, d1, d2, d3) {
+	MCP2300xLCD(iox, rs, -1, en, d0, d1, d2, d3) {
 	
 }
 */
 
-void xLCD::init_xtender() {
+void MCP2300xLCD::init_xtender() {
 	xpander.init();
 	xpander.IOMode((byte)0x00);
 	/*
@@ -51,7 +51,7 @@ void xLCD::init_xtender() {
 	backlightOff();
 }
 
-void xLCD::begin(uint8_t cols, uint8_t lines, uint8_t dotsize) {
+void MCP2300xLCD::begin(uint8_t cols, uint8_t lines, uint8_t dotsize) {
 	
 	if (lines > 1) {
 		_displayfunction |= LCD_2LINE;
@@ -129,7 +129,7 @@ void xLCD::begin(uint8_t cols, uint8_t lines, uint8_t dotsize) {
 	command(LCD_ENTRYMODESET | _displaymode);
 }
 
-size_t xLCD::write(uint8_t value) {
+size_t MCP2300xLCD::write(uint8_t value) {
 	send(value, HIGH);
 	return 1;
 }
@@ -137,7 +137,7 @@ size_t xLCD::write(uint8_t value) {
 /************ low level data pushing commands **********/
 
 // write either command or data, with automatic 4/8-bit selection
-void xLCD::send(uint8_t value, uint8_t mode) {
+void MCP2300xLCD::send(uint8_t value, uint8_t mode) {
 	uint8_t myGPIO = xpander.read();
 	if (mode == HIGH) {
 		myGPIO |= (0x01 << _rs_pin);
@@ -158,7 +158,7 @@ void xLCD::send(uint8_t value, uint8_t mode) {
 	
 }
 
-void xLCD::pulseEnable(uint8_t cache) {
+void MCP2300xLCD::pulseEnable(uint8_t cache) {
 	cache |= 0x01 << _enable_pin;
 	xpander.write(cache);
 	delayMicroseconds(1);    // enable pulse must be >450ns
@@ -167,11 +167,11 @@ void xLCD::pulseEnable(uint8_t cache) {
 	delayMicroseconds(50);   // commands need > 37us to settle
 }
 
-void xLCD::pulseEnable(void) {
+void MCP2300xLCD::pulseEnable(void) {
 	pulseEnable(xpander.read());
 }
 
-void xLCD::write4bits(uint8_t value) {
+void MCP2300xLCD::write4bits(uint8_t value) {
 	uint8_t bits = xpander.read();
 	//    xtender.pinMode(_data_pins[i], OUTPUT);
 	//	xtender.IOdirection(0x00);
@@ -186,11 +186,11 @@ void xLCD::write4bits(uint8_t value) {
 	pulseEnable(bits);
 }
 
-void xLCD::backlightOn() {
+void MCP2300xLCD::backlightOn() {
 	xpander.digitalWrite(_bklight_pin, true);
 }
 
-void xLCD::backlightOff() {
+void MCP2300xLCD::backlightOff() {
 	xpander.digitalWrite(_bklight_pin, false );
 }
 

@@ -1,12 +1,12 @@
 /*
- * xLCD.h
+ * MCP2300xLCD.h
  *
  *  Created on: 2012/04/18
  *      Author: sin
  */
 
-#ifndef XLCD_H_
-#define XLCD_H_
+#ifndef MCP2300xLCD_H_
+#define MCP2300xLCD_H_
 
 #if ARDUINO >= 100
 #include "Arduino.h"
@@ -59,7 +59,7 @@
 #define LCD_5x10DOTS 0x04
 #define LCD_5x8DOTS 0x00
 
-class xLCD: public CharacterLCD {
+class MCP2300xLCD: public CharacterLCD {
 	MCP23009 xpander;
 	uint8_t _rs_pin, _rw_pin, _enable_pin;
 	uint8_t _data_pins[4];
@@ -75,7 +75,7 @@ class xLCD: public CharacterLCD {
 	void init_xtender();
 
 public:
-	xLCD(uint8_t addr, uint8_t rs, uint8_t wr, uint8_t enable, uint8_t d0,
+	MCP2300xLCD(uint8_t addr, uint8_t rs, uint8_t wr, uint8_t enable, uint8_t d0,
 			uint8_t d1, uint8_t d2, uint8_t d3, uint8_t bklight = -1);
 //	~xLCD() {}
 

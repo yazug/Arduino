@@ -6,7 +6,7 @@
 #include <SoftwareSerial.h>
 #endif
 //#include "LCD.h"
-#include "SerialLCD.h"
+#include "SparkfunSerialLCD.h"
 
 /* ======================================================== */
 
