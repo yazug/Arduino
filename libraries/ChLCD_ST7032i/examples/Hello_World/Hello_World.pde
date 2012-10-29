@@ -4,7 +4,7 @@
   
 #include <Wire.h>
 #include "CharacterLCD.h"
-#include "LCD_ST7032i.h"
+#include "ST7032i.h"
 
 LCD_ST7032i lcd;             // Number of lines and i2c address of the display
 

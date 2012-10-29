@@ -16,7 +16,7 @@
 #include <WProgram.h>
 #endif
 #include <Wire.h>
-#include "LCD_ST7032i.h"
+#include "ST7032i.h"
 
 #define CMDDELAY 50        // Delay to wait after sending commands;
 #define DATADELAY 50        // Delay to wait after sending data;
