@@ -7,15 +7,15 @@ extern "C" {
 }
 #endif
  */
-#include "DS1307.h"
+#include "M41T62.h"
 #include <Wire.h>
 
-
+/*
 PROGMEM const prog_char M41T62::NameOfDay[]=
 "Sun\0Mon\0Tue\0Wed\0Thu\0Fri\0Sat\0";
 PROGMEM const prog_char M41T62::NameOfMonth[]=
 "Jan\0Feb\0Mar\0Apr\0May\0Jun\0Jul\0Aug\0Sep\0Oct\0Nov\0Dec\0";
-
+*/
 // PRIVATE FUNCTIONS
 
 // Aquire data from the RTC chip in BCD format
@@ -23,7 +23,7 @@ PROGMEM const prog_char M41T62::NameOfMonth[]=
 void M41T62::readRegisters(uint8_t addr, uint8_t * regvals, uint8_t num) {
 	// use the Wire lib to connect to tho rtc
 	// reset the resgiter pointer to zero
-	Wire.beginTransmission(DS1307_CTRL_ID);
+	Wire.beginTransmission(MT41T62_SLAVEADDR);
 #if ARDUINO >= 100
 //    WIRE_WRITE(addr); //Wire.send(addr);
  	Wire.write(addr);
@@ -33,7 +33,7 @@ void M41T62::readRegisters(uint8_t addr, uint8_t * regvals, uint8_t num) {
 	Wire.endTransmission();
 
 	// request num bytes of data
-	Wire.requestFrom((uint8_t)DS1307_CTRL_ID, num);
+	Wire.requestFrom((uint8_t)MT41T62_SLAVEADDR, num);
 	for(int i = 0; i < num; i++) {
 		// store data in raw bcd format
 #if ARDUINO >= 100
@@ -47,7 +47,7 @@ void M41T62::readRegisters(uint8_t addr, uint8_t * regvals, uint8_t num) {
 // update the data on the IC from the bcd formatted data in the buffer
 void M41T62::writeRegisters(uint8_t addr, uint8_t *regvals, uint8_t num)
 {
-	Wire.beginTransmission(DS1307_CTRL_ID);
+	Wire.beginTransmission(MT41T62_SLAVEADDR);
 #if ARDUINO >= 100
 	Wire.write(addr); // reset register pointer
 #else
@@ -66,31 +66,32 @@ void M41T62::writeRegisters(uint8_t addr, uint8_t *regvals, uint8_t num)
 
 
 void M41T62::updateTime() {
-	readRegisters((byte) DS1307_SEC, (byte *) &time, 3);
+	readRegisters((byte) M41T62_SEC, (byte *) &time, 3);
 	time &= ((unsigned long)BITS_HR<<16 | BITS_MIN<<8 | BITS_SEC);
 }
 
 void M41T62::updateCalendar() {
-	readRegisters((byte) DS1307_DATE, (byte *) &cal, 3);
+	readRegisters((byte) M41T62_DATE, (byte *) &cal, 3);
 	cal &= ((unsigned long)BITS_YR<<16 | (unsigned long)BITS_MTH<<8 | BITS_DATE);
 }
 
 void M41T62::setTime(const long & p) {
 //	writeRegisters((byte *) &(p ((unsigned long)BITS_HR<<16 | BITS_MIN<<8 | BITS_SEC)),
-//			(byte) DS1307_SEC, 3);
-	writeRegisters((byte) DS1307_SEC, (byte *) &p, 3);
+//			(byte) M41T62_SEC, 3);
+	writeRegisters((byte) M41T62_SEC, (byte *) &p, 3);
 }
 
 void M41T62::setCalendar(const long & p) {
 	// YYMMDD
-//	writeRegisters((byte*) &(p & ((unsigned long)BITS_YR<<16 | (unsigned long)BITS_MTH<<8 | BITS_DATE)), (uint8_t) DS1307_DOW, 4);
-	writeRegisters((uint8_t) DS1307_DATE, (byte*) &p, 3);
+//	writeRegisters((byte*) &(p & ((unsigned long)BITS_YR<<16 | (unsigned long)BITS_MTH<<8 | BITS_DATE)), (uint8_t) M41T62_DOW, 4);
+	writeRegisters((uint8_t) M41T62_DATE, (byte*) &p, 3);
 }
 
+/*
 byte M41T62::dayOfWeek() {
 	return  (JD2000(cal) + 1) % 7;
 }
-
+*/
 long M41T62::JD2000(const long & yymmdd) {
 	byte y = yymmdd>>16 & 0xff;
 	byte m = yymmdd>>8 & 0xff;
@@ -119,7 +120,7 @@ long M41T62::JD2000(byte year, byte month, byte day) {
 //	return long(long(365.25 * long(year)) + int(30.6001 * (month + 1)) + day
 //			+ 1720994.5 + b);
 }
-
+/*
 void M41T62::writeRegister(byte rg, byte val) {
 	writeRegisters(rg % 0x40, (uint8_t *) &val, 1);
 }
@@ -129,22 +130,22 @@ byte M41T62::readRegister(byte rg) {
 	readRegisters(rg % 0x40, (uint8_t *) &val, 1);
 	return val;
 }
-
+*/
 
 void M41T62::stop(void)
 {
 	// set the ClockHalt bit high to stop the rtc
 	// this bit is part of the seconds byte
-    uint8_t r;
-	readRegisters((uint8_t) DS1307_SEC, &r, 1);
-	r |= DS1307_CLOCKHALT;
-    writeRegisters(DS1307_SEC, &r, 1);
+//    uint8_t r;
+//	readRegisters((uint8_t) M41T62_SEC, &r, 1);
+//	r |= M41T62_CLOCKHALT;
+ //   writeRegisters(M41T62_SEC, &r, 1);
 }
 
 void M41T62::start(void)
 {
 	// unset the ClockHalt bit to start the rtc
 	// TODO : preserve existing seconds
-    uint8_t r = 0;
-	writeRegisters(DS1307_SEC, &r, 1);
+//    uint8_t r = 0;
+//	writeRegisters(M41T62_SEC, &r, 1);
 }
