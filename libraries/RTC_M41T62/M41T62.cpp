@@ -144,8 +144,21 @@ void M41T62::stop(void)
 
 void M41T62::start(void)
 {
-	// unset the ClockHalt bit to start the rtc
-	// TODO : preserve existing seconds
-//    uint8_t r = 0;
-//	writeRegisters(M41T62_SEC, &r, 1);
+	byte d[8];
+	// clear stop bit, check must-be-zero bits
+	readRegisters(M41T62_100THS_SECS, d, 8);
+	d[1] &= 0x7f;
+	d[2] &= 0x7f;
+	d[3] &= 0x3f;
+	d[4] &= 0x07;
+	d[5] &= 0x3f;
+	d[6] &= 0xdf;
+	writeRegisters(M41T62_ALARM_DATE, d+1, 6);
+	// alarm off, SQWE off
+	readRegisters(M41T62_ALARM_MONTH, d, 4);
+	d[0] = 0x1f;
+	d[1] &= 0x7f;
+	d[2] &= 0x7f;
+	d[3] &= 0x7f;
+	writeRegisters(M41T62_ALARM_MONTH, d, 4);
 }

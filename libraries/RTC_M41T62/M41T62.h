@@ -18,18 +18,26 @@
 // library interface description
 class M41T62 {
 	// library-accessible "private" interface
-public:
 	void readRegisters(byte reg, uint8_t *, byte);
 	void writeRegisters(byte reg, uint8_t *, byte);
 
-	enum {
-		M41T62_SEC = 0,
-		M41T62_MIN,
-		M41T62_HR,
+	enum RegisterAddr {
+		M41T62_100THS_SECS= 0,
+		M41T62_SECS,
+		M41T62_MINS,
+		M41T62_HOURS,
 		M41T62_DOW,
 		M41T62_DATE,
-		M41T62_MTH,
-		M41T62_YR
+		M41T62_CENT_MONTH,
+		M41T62_YEARS,
+		M41T62_CALIB,
+		M41T62_WDMB,
+		M41T62_ALARM_MONTH,
+		M41T62_ALARM_DATE,
+		M41T62_ALARM_HOUR,
+		M41T62_ALARM_NIMS,
+		M41T62_ALARM_SECS,
+		M41T62_WDFLAGS,
 	};
 
 	static const uint8_t MT41T62_SLAVEADDR = 0b1101000;
@@ -38,11 +46,15 @@ public:
 	static const uint8_t M41T62_CLOCKHALT = 0b10000000;
 */
 	static const uint8_t BITS_SEC = 0b01111111;
-	static const uint8_t BITS_HR = 0b00111111;
+	static const uint8_t BITS_STOPBIT = 1<<7;
 	static const uint8_t BITS_MIN = 0b01111111;
+	static const uint8_t BITS_OFIE = 1<<7;
+	static const uint8_t BITS_HR = 0b00111111;
 	static const uint8_t BITS_DOW = 0b00000111;
+	static const uint8_t BITS_RS = 0b11110000;
 	static const uint8_t BITS_DATE = 0b00111111;
-	static const uint8_t BITS_MTH = 0b00111111;
+	static const uint8_t BITS_MTH = 0b00011111;
+	static const uint8_t BITS_CENT = 0b11000000;
 	static const uint8_t BITS_YR = 0b11111111;
 /*
 	static const int DS1307_BASE_YR = 2000;
