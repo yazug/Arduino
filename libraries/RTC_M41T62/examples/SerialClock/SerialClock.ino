@@ -1,89 +1,87 @@
 #include <Wire.h>
-#include <DS1307.h>
+#include "M41T62.h"
 
-DS1307 rtc = DS1307();
+#include <string.h>
 
-unsigned long asBCD(unsigned long lval) {
-  unsigned long tmp;
-  byte * p = (byte*)(&tmp);
-  int i;
-  for ( i = 0; i < 4; i++) {
-    p[i] = lval%10;
-    lval /= 10;
-    p[i] |= (lval%10)<<4;
-    lval /= 10;
-  }
-  return tmp;
-}
-
+M41T62 rtc;
+long clockval;
 
 void setup() {
+//  pinMode(7, INPUT);
+//  digitalWrite(7, HIGH);
+  
+  Serial.begin(19200);
+  Serial.println("Hi.");
+  
   Wire.begin();
-  rtc.init();
-  Serial.begin(9600);
-  Serial.println("Hi, there!");
+  rtc.begin();
+  /*
+  byte a[] = {1};
+   rtc.transfer(0x93, a,1);
+   */
+
+  delay(500);
 }
 
-long clockval;
 void loop() {
-  long temp = 0;
-  long cal;
-  byte c, buf[32];
-  int bp;
-  
+  long temp;
+  byte buf[16], * p;
+  byte c, serbuf[32];
   long idlemillis;
-  
+  int bp;
+
   if (Serial.available()) {
     bp = 0;
     while (Serial.available()) {
       idlemillis = millis();
       c = Serial.read();
-      buf[bp] = c;
+      serbuf[bp] = c;
       bp++;
       bp %= 32;
-      buf[bp] = 0;
+      serbuf[bp] = 0;
       while (!Serial.available()) {
         if (millis() - idlemillis > 500)
           break;
       }
       if ( millis() - idlemillis > 500 
         || c == '.' ) {
-          break;
+        break;
       }
     }
-    
+
     if ( c == '.' ) {
-      switch(buf[0]) {
+      switch(serbuf[0]) {
       case 'T':
       case 't':
-        temp = atol((char*)&buf[1]);
-        temp = asBCD(temp);
-        Serial.println(temp,HEX);
+        temp = strtol((char*)&serbuf[1], NULL, 16);
         rtc.setTime(temp);
+        Serial.println(temp, HEX);
         break;
       case 'C':
       case 'c':
-        temp = atol((char*)&buf[1]);
-        temp = asBCD(temp);
-        Serial.println(temp,HEX);
+        temp = strtol((char*)&serbuf[1], NULL, HEX);
         rtc.setCalendar(temp);
+        Serial.println(temp, HEX);
         break;
       }
     }
   }
-  
+
   delay(100);
   rtc.updateTime();
   if ( rtc.time != clockval ) {
     clockval = rtc.time;
     rtc.updateCalendar();
-    Serial.print( rtc.timeString((char*) buf) );
+    Serial.print( rtc.time, HEX );
     Serial.print(" ");
-    Serial.print( rtc.calendarString((char*) buf) );
+    Serial.print( rtc.cal, HEX);
     Serial.print(" ");
     Serial.print( rtc.copyNameOfDay((char*) buf, rtc.dayOfWeek()) );
     Serial.println();
     delay(100);
   }
 }
+
+
+
 

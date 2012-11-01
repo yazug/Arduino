@@ -22,29 +22,26 @@ class M41T62 {
 	void writeRegisters(byte reg, uint8_t *, byte);
 
 	enum RegisterAddr {
-		M41T62_100THS_SECS= 0,
-		M41T62_SECS,
-		M41T62_MINS,
-		M41T62_HOURS,
+		M41T62_100THS_SEC= 0,
+		M41T62_SEC,
+		M41T62_MIN,
+		M41T62_HOUR,
 		M41T62_DOW,
 		M41T62_DATE,
 		M41T62_CENT_MONTH,
-		M41T62_YEARS,
+		M41T62_YEAR,
 		M41T62_CALIB,
 		M41T62_WDMB,
 		M41T62_ALARM_MONTH,
 		M41T62_ALARM_DATE,
 		M41T62_ALARM_HOUR,
-		M41T62_ALARM_NIMS,
-		M41T62_ALARM_SECS,
-		M41T62_WDFLAGS,
+		M41T62_ALARM_NIM,
+		M41T62_ALARM_SEC,
+		M41T62_WDFLAG,
 	};
 
 	static const uint8_t MT41T62_SLAVEADDR = 0b1101000;
-/*
-	// Define register bit masks
-	static const uint8_t M41T62_CLOCKHALT = 0b10000000;
-*/
+
 	static const uint8_t BITS_SEC = 0b01111111;
 	static const uint8_t BITS_STOPBIT = 1<<7;
 	static const uint8_t BITS_MIN = 0b01111111;
@@ -66,8 +63,8 @@ class M41T62 {
 	// user-accessible "public" interface
 
 public:
-//	PROGMEM const static prog_char NameOfDay[36];
-//	PROGMEM const static prog_char NameOfMonth[60];
+	PROGMEM const static prog_char NameOfDay[36];
+	PROGMEM const static prog_char NameOfMonth[60];
 	/*
 	enum DAYINDEX {
 		NA = 0, SUN = 1, MON, TUE, WED, THU, FRI, SAT,
@@ -100,12 +97,12 @@ public:
 
 	void start(void);
 	void stop(void);
-/*
+
 	byte dayOfWeek();
-	*/
+
 	static long JD2000(byte y, byte m, byte d);
 	static long JD2000(const long & yymmdd);
-/*
+
 	static char * copyNameOfDay(char * buf, byte d) {
 		strcpy_P(buf, NameOfDay + d * 4);
 		return buf;
@@ -115,7 +112,7 @@ public:
 		strcpy_P(buf, NameOfMonth + ((m+11) % 12) * 4);
 		return buf;
 	}
-*/
+
 };
 
 #endif

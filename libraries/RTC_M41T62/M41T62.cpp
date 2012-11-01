@@ -10,12 +10,12 @@ extern "C" {
 #include "M41T62.h"
 #include <Wire.h>
 
-/*
+
 PROGMEM const prog_char M41T62::NameOfDay[]=
 "Sun\0Mon\0Tue\0Wed\0Thu\0Fri\0Sat\0";
 PROGMEM const prog_char M41T62::NameOfMonth[]=
 "Jan\0Feb\0Mar\0Apr\0May\0Jun\0Jul\0Aug\0Sep\0Oct\0Nov\0Dec\0";
-*/
+
 // PRIVATE FUNCTIONS
 
 // Aquire data from the RTC chip in BCD format
@@ -83,15 +83,19 @@ void M41T62::setTime(const long & p) {
 
 void M41T62::setCalendar(const long & p) {
 	// YYMMDD
-//	writeRegisters((byte*) &(p & ((unsigned long)BITS_YR<<16 | (unsigned long)BITS_MTH<<8 | BITS_DATE)), (uint8_t) M41T62_DOW, 4);
-	writeRegisters((uint8_t) M41T62_DATE, (byte*) &p, 3);
+	byte t[3];
+	readRegisters((uint8_t) M41T62_DATE, (byte*) &t, 3);
+	t[0] = (p & BITS_DATE) | (t[0] & ~BITS_DATE);
+	t[1] = (p>>8 & BITS_MTH) | (t[1] & ~BITS_MTH);
+	t[2] = p>>16 & 0xff;
+	writeRegisters((uint8_t) M41T62_DATE, t, 3);
 }
 
-/*
+
 byte M41T62::dayOfWeek() {
 	return  (JD2000(cal) + 1) % 7;
 }
-*/
+
 long M41T62::JD2000(const long & yymmdd) {
 	byte y = yymmdd>>16 & 0xff;
 	byte m = yymmdd>>8 & 0xff;
@@ -120,17 +124,6 @@ long M41T62::JD2000(byte year, byte month, byte day) {
 //	return long(long(365.25 * long(year)) + int(30.6001 * (month + 1)) + day
 //			+ 1720994.5 + b);
 }
-/*
-void M41T62::writeRegister(byte rg, byte val) {
-	writeRegisters(rg % 0x40, (uint8_t *) &val, 1);
-}
-
-byte M41T62::readRegister(byte rg) {
-	byte val;
-	readRegisters(rg % 0x40, (uint8_t *) &val, 1);
-	return val;
-}
-*/
 
 void M41T62::stop(void)
 {
@@ -142,11 +135,10 @@ void M41T62::stop(void)
  //   writeRegisters(M41T62_SEC, &r, 1);
 }
 
-void M41T62::start(void)
-{
+void M41T62::start(void) {
 	byte d[8];
 	// clear stop bit, check must-be-zero bits
-	readRegisters(M41T62_100THS_SECS, d, 8);
+	readRegisters(M41T62_100THS_SEC, d, 8);
 	d[1] &= 0x7f;
 	d[2] &= 0x7f;
 	d[3] &= 0x3f;

@@ -16,7 +16,7 @@
 #include <Wire.h>
 
 // library interface description
-class M41T62 {
+class DS1307 {
 	// library-accessible "private" interface
 private:
 	void readRegisters(byte reg, uint8_t *, byte);
@@ -62,7 +62,7 @@ public:
 public:
 	long time, cal;
 
-	M41T62() : time(0), cal(0) {
+	DS1307() : time(0), cal(0) {
 	}
 
 	void init() {
