@@ -9,7 +9,7 @@
 #endif
 #include "Print.h"
 
-#include "CharacterLCD.h"
+//#include "CharacterLCD.h"
 
 // commands
 #define LCD_CLEARDISPLAY 0x01
