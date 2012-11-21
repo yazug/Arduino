@@ -62,4 +62,25 @@ atmega1284.build.f_cpu=16000000L
 atmega1284.build.core=arduino
 atmega1284.build.variant=quaranta
 
+##############################################################
+
+atmega1284.name=Quaranta 1284p tv
+
+atmega1284.upload.protocol=stk500
+atmega1284.upload.maximum_size=131072
+atmega1284.upload.speed=57600
+
+atmega1284.bootloader.low_fuses=0xFF
+atmega1284.bootloader.high_fuses=0x9A
+atmega1284.bootloader.extended_fuses=0xFF
+atmega1284.bootloader.path=atmega
+atmega1284.bootloader.file=ATmegaBOOT_168_atmega1284p.hex
+atmega1284.bootloader.unlock_bits=0x3F
+atmega1284.bootloader.lock_bits=0x0F
+
+atmega1284.build.mcu=atmega1284p
+atmega1284.build.f_cpu=16000000L
+atmega1284.build.core=arduino
+atmega1284.build.variant=quaranta
+
 #
