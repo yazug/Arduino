@@ -1,0 +1,21 @@
+serLCD	KEYWORD1
+setBrightness	KEYWORD2
+clear	KEYWORD2
+clearLine	KEYWORD2
+selectLine	KEYWORD2
+home	KEYWORD2
+setSplash	KEYWORD2
+toggleSplash	KEYWORD2
+toggleSplash	KEYWORD2
+leftToRight	KEYWORD2
+blink		KEYWORD2
+noBlink		KEYWORD2
+cursor		KEYWORD2
+noCursor		KEYWORD2
+display		KEYWORD2
+noDisplay		KEYWORD2
+setCursor		KEYWORD2
+createChar		KEYWORD2
+createChar		KEYWORD2
+printCustomChar		KEYWORD2
+
